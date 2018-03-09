@@ -16,27 +16,29 @@ class Login(Tk):
 		self.login_pic_path = './pictures/login.gif'
 		self.login_userinfo_path = 'usrs_info.pickle'
 		self.login_usrinfo_default_path = 'usrs_info_defaul.pickle'
+		self.administor_name = 'admin'
+		self.administor_pwd = 'ImAdmin'
 		#window parameters init
 		self.title('Login')
-		self.geometry('450x300')
-		self.login_image()
-		self.login_userInfo()
-		self.login_bnt()
+		#central display
+		win_width = 450
+		win_height = 300
+		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
+		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2
+		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
+		self.login_init()
 		self.login_default_info()
-		
-	#welcome image
-	def login_image(self):
+			
+	def login_init(self):
+		#welcome image
 		self.canvas = Canvas(self, height = 200, width = 500)
 		self.image_file = PhotoImage(file = self.login_pic_path)
 		image = self.canvas.create_image(0, 0, anchor = 'nw', image = self.image_file)
 		self.canvas.pack(side = 'top')
-	
-	#user information
-	def login_userInfo(self):
+		#user information
 		#set label
 		Label(self, text = 'User name:').place(x = 50, y = 150)
-		Label(self, text = 'Password:').place(x = 50, y = 190)
-		
+		Label(self, text = 'Password:').place(x = 50, y = 190)		
 		#login user name input
 		self.var_usr_name = StringVar()
 		entry_usr_name = Entry(self, textvariable = self.var_usr_name)
@@ -45,12 +47,18 @@ class Login(Tk):
 		self.var_usr_pwd = StringVar()
 		entry_usr_pwd = Entry(self, textvariable = self.var_usr_pwd, show = '*')
 		entry_usr_pwd.place(x = 160, y = 190)
-	#login and sign up button
-	def login_bnt(self):
+		#login and sign up button
 		bnt_login = Button(self, text = 'Login', comman = self.usr_login)
 		bnt_login.place(x = 170, y = 230)
-		bnt_sign_up = Button(self, text = 'Sign up', command = self.usr_sign_up)
+		bnt_sign_up = Button(self, text = 'Add New', command = self.usr_sign_up)
 		bnt_sign_up.place(x = 270, y = 230)	
+		#create a new user information file
+		try:
+			open(self.login_userinfo_path, 'rb')
+		except FileNotFoundError:
+			with open(self.login_userinfo_path, 'wb') as usr_file:
+				usrs_info = {self.administor_name:self.administor_pwd}	#default dictionary			
+				pickle.dump(usrs_info, usr_file)
 		
 	#reset the login information after sign up
 	def reset_login_info(self, new_user_name):
@@ -83,10 +91,11 @@ class Login(Tk):
 			with open(self.login_userinfo_path, 'rb') as usr_file:
 				usrs_info = pickle.load(usr_file)
 		except FileNotFoundError:
-			open(self.login_userinfo_path, 'wb')
-			usrs_info = {}	#null dictionary			
-		
-		if self.usr_name in usrs_info:			
+			with open(self.login_userinfo_path, 'wb') as usr_file:
+				usrs_info = {self.administor_name:self.administor_pwd}	#null dictionary			
+				pickle.dump(usrs_info, usr_file)
+				
+		if self.usr_name != '' and self.usr_name in usrs_info:			
 			if self.usr_pwd == usrs_info[self.usr_name]:
 				default_info = []
 				default_info.append(self.usr_name)
@@ -96,13 +105,15 @@ class Login(Tk):
 				tkinter.messagebox.showinfo(title = 'Welcome', message = 'how are you?' + self.usr_name)
 			else:
 				tkinter.messagebox.showerror(message = 'Error, your password is wrong!')
-		else:
-			self.is_sign_up = tkinter.messagebox.askyesno('Welcome', 'You have not sign up yet. Sign up today?')
-			if self.is_sign_up:
-				self.usr_sign_up()
+		
 	#user sign up
 	def usr_sign_up(self):
-		self.signin_win = SignIn(self, self.login_userinfo_path)
+		self.usr_name = self.var_usr_name.get()
+		self.usr_pwd = self.var_usr_pwd.get()
+		if self.usr_name == self.administor_name and self.usr_pwd == self.administor_pwd:
+			self.signin_win = SignIn(self, self.login_userinfo_path)
+		else:
+			tkinter.messagebox.showinfo(title = 'Notice', message = 'Sorry! You are not Administrator.')
 	
 #sign in window class
 class SignIn(Toplevel):
@@ -110,7 +121,12 @@ class SignIn(Toplevel):
 		Toplevel.__init__(self, master)
 		self.login_userInfo_path = login_userInfo_path
 		self.title('Sign In')
-		self.geometry('350x200')
+		#sign in window geometry
+		win_width = 350
+		win_height = 200
+		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
+		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2		
+		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
 		self.sign_in_win()
 		
 	def sign_in_win(self):
@@ -141,20 +157,28 @@ class SignIn(Toplevel):
 		new_pwd_confirm = self.sign_pwd_confi_var.get()
 		new_name = self.sign_name_var.get()
 		
-		with open(self.login_userInfo_path, 'rb') as usr_file:
-			exist_usr_info = pickle.load(usr_file)
-		if 	new_pwd != new_pwd_confirm:
-			tkinter.messagebox.showerror('Error', 'Password and confirm password must be the same')
-		elif new_name in exist_usr_info:
-			tkinter.messagebox.showerror('Error', 'The user has already signed up')
-		else:
-			exist_usr_info[new_name] = new_pwd
-			with open(self.login_userInfo_path, 'wb') as usr_file:
-				pickle.dump(exist_usr_info, usr_file)
-			tkinter.messagebox.showinfo('welcome', 'Succeed Signed Up')
-			self.master.reset_login_info(self.sign_name_var.get())
-			self.destroy()
-			
+		if new_name != '' and new_pwd != '' and new_pwd_confirm != '':		
+			with open(self.login_userInfo_path, 'rb') as usr_file:
+				exist_usr_info = pickle.load(usr_file)
+			if 	new_pwd != new_pwd_confirm:
+				tkinter.messagebox.showerror('Error', 'Password and confirm password must be the same')
+				#lift the sign up window to the top
+				self.lift(self.master)
+			elif new_name in exist_usr_info:
+				tkinter.messagebox.showerror('Error', 'The user has already signed up')
+				#lift the sign up window to the top
+				self.lift(self.master)
+			else:
+				exist_usr_info[new_name] = new_pwd
+				with open(self.login_userInfo_path, 'wb') as usr_file:
+					pickle.dump(exist_usr_info, usr_file)
+				tkinter.messagebox.showinfo('welcome', 'Succeed Signed Up')
+				self.master.reset_login_info(self.sign_name_var.get())
+				self.destroy()
+		else:	
+			tkinter.messagebox.showinfo('Warning', 'Illegal Input')
+			#lift the sign up window to the top
+			self.lift(self.master)	
 	def sign_cancel_callback(self):		
 		self.destroy()
 		

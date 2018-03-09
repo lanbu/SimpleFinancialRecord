@@ -102,3 +102,5 @@ ENV/
 
 #private add -- lanbu
 pictures/
+usrs_info.pickle
+usrs_info_defaul.pickle
