@@ -8,6 +8,7 @@ __author__ = 'Lanbu'
 from tkinter import *
 import pickle
 import tkinter.messagebox
+from SRF_mainPanel import *
 
 #login window class
 class Login(Tk):
@@ -102,7 +103,8 @@ class Login(Tk):
 				default_info.append(self.usr_pwd)
 				
 				self.login_default_info(default_info)
-				tkinter.messagebox.showinfo(title = 'Welcome', message = 'how are you?' + self.usr_name)
+				#tkinter.messagebox.showinfo(title = 'Welcome', message = 'how are you?' + self.usr_name)
+				self.mainPanel = MainPanel(self)
 			else:
 				tkinter.messagebox.showerror(message = 'Error, your password is wrong!')
 		
