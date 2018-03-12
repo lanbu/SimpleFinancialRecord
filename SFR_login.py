@@ -19,6 +19,7 @@ class Login(Tk):
 		self.login_usrinfo_default_path = 'usrs_info_defaul.pickle'
 		self.administor_name = 'admin'
 		self.administor_pwd = 'ImAdmin'
+		self.user_role = None
 		#window parameters init
 		self.title('Login')
 		#central display
@@ -104,7 +105,11 @@ class Login(Tk):
 				
 				self.login_default_info(default_info)
 				#tkinter.messagebox.showinfo(title = 'Welcome', message = 'how are you?' + self.usr_name)
-				self.mainPanel = MainPanel(self)
+				if self.usr_name == 'admin':
+					self.user_role = 1
+				else:
+					self.user_role = 0
+				self.mainPanel = MainPanel(self, self.user_role)
 			else:
 				tkinter.messagebox.showerror(message = 'Error, your password is wrong!')
 		
