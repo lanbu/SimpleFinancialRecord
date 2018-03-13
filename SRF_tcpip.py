@@ -39,8 +39,32 @@ class tcpip_server():
 	
 	#loop function for server linked with client
 	def	sc_linked_loop(self, sock, addr):
-		
+		try:
+			data = sock.recv()
+			#process the data
+		finally:
+			sock.close()
 	
 	#close server
 	def server_close(self):
 		self.is_loop_ok = False
+		
+		
+class tcpip_client():
+	def __init__(self, ip_addr, ip_port):
+		self.client_addr = (ip_addr, ip_port)
+		c_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		
+	def client_connect(self):
+		try:
+			c_sock.connect(self.client_addr)
+		except:
+			#connect failed
+			pass
+		finally:
+			c_sock.close()
+	def client_send(self, send_data):
+		try:
+			c_sock.send(send_data)
+		except:
+			#send failed
