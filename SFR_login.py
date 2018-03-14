@@ -50,9 +50,9 @@ class Login(Tk):
 		entry_usr_pwd = Entry(self, textvariable = self.var_usr_pwd, show = '*')
 		entry_usr_pwd.place(x = 160, y = 190)
 		#login and sign up button
-		bnt_login = Button(self, text = 'Login', comman = self.usr_login)
+		bnt_login = Button(self, text = '登录', command = self.usr_login)
 		bnt_login.place(x = 170, y = 230)
-		bnt_sign_up = Button(self, text = 'Add New', command = self.usr_sign_up)
+		bnt_sign_up = Button(self, text = '添加', command = self.usr_sign_up)
 		bnt_sign_up.place(x = 270, y = 230)	
 		#create a new user information file
 		try:
