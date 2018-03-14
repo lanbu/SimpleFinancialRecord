@@ -109,7 +109,7 @@ class Login(Tk):
 					self.user_role = 1
 				else:
 					self.user_role = 0
-				self.mainPanel = MainPanel(self, self.user_role)
+				self.mainPanel = MainPanel(self, self.user_role, self.usr_name)
 			else:
 				tkinter.messagebox.showerror(message = 'Error, your password is wrong!')
 		
