@@ -88,6 +88,7 @@ class MainPanelServer(Toplevel):
 		self.gross_profit_lbl = ttk.Label(self.gui_frame, text = '毛利:')
 		self.gross_profit = ttk.Label(self.gui_frame, text = '0')
 		self.gross_update_bnt = ttk.Button(self.gui_frame, text = '更新', command = self.bnt_update_gross_profit)
+		self.reg_user_manage_bnt = ttk.Button(self.gui_frame, text = '用户管理', command = self.bnt_manage_users)
 		
 		#grid widgets
 		self.gui_frame.grid(column = 0, row = 0, padx = 10)
@@ -129,6 +130,7 @@ class MainPanelServer(Toplevel):
 		self.gross_profit_lbl.grid(column = 0, row = gui_row, sticky = W, pady = 10)
 		self.gross_profit.grid(column = 1, row = gui_row, sticky = W)
 		self.gross_update_bnt.grid(column = 2, row = gui_row, sticky = E)
+		self.reg_user_manage_bnt.grid(column = 7, row = gui_row, sticky = E)
 	
 	#create a new record
 	def bnt_create_new_record(self):
@@ -141,6 +143,10 @@ class MainPanelServer(Toplevel):
 	#update the gross profit
 	def bnt_update_gross_profit(self):
 		pass
+		
+	#manage the registered user
+	def bnt_manage_users(self):
+		UserPanelManage(self)
 		
 ######################################## main panel for client ###################################		
 #client main panel
@@ -335,3 +341,52 @@ class ChildPanelSearch(Toplevel):
 		else:
 			self.is_modify = True
 			self.bnt_modify_text.set('修改')
+			
+############################################## panel for user manage#################################	
+class UserPanelManage(Toplevel):
+	#init
+	def __init__(self, master = None):
+		Toplevel.__init__(self, master)
+		self.is_modify = True
+		win_width = 220
+		win_height = 260
+		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
+		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2
+		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
+		#mange gui init
+		self.manage_win_init()	
+		
+	#gui init
+	def manage_win_init(self):
+		self.title('User Manage')
+		self.gui_frame = ttk.Frame(self)		
+		#row 0
+		self.user_list_lbl = ttk.Label(self.gui_frame, text = '已注册用户列表')
+		#row 1
+		self.user_list_box = Listbox(self.gui_frame, height = 10)
+		self.list_scro = ttk.Scrollbar(self.gui_frame, orient = VERTICAL, command = self.user_list_box.yview) 
+		#row 2
+		self.bnt_sure = ttk.Button(self.gui_frame, text = '确认', command = self.bnt_user_manage_sure)
+		self.bnt_delete = ttk.Button(self.gui_frame, text = '删除', command = self.bnt_user_manage_del)
+		
+		#grid widgets
+		self.gui_frame.grid(column = 0, row = 0, padx = 10)
+		#row 0
+		self.user_list_lbl.grid(column = 0, row = 0, columnspan = 2, pady = 5)
+		#row 1
+		self.user_list_box.grid(column = 0, row = 1, columnspan = 2, sticky = (N, W, E, S))
+		self.list_scro.grid(column = 3, row = 1, sticky = (N, S))
+		self.user_list_box['yscrollcommand'] = self.list_scro.set
+		#row 2
+		self.bnt_sure.grid(column = 0, row = 2, padx = 5, pady = 10)
+		self.bnt_delete.grid(column = 1, row = 2)
+		
+	#sure
+	def bnt_user_manage_sure(self):
+		self.destroy()
+	
+	#delete
+	def bnt_user_manage_del(self):
+		is_delete = tkinter.messagebox.askyesno(message = '确认删除该用户？', icon = 'question', title = 'ask')
+		if is_delete == True:
+			pass
