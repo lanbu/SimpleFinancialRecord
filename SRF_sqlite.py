@@ -19,25 +19,49 @@ class FinancialDataRecord():
 		self.record_expense = None
 		self.record_expense_s = None
 		self.record_remark = None
-		#create a connection\
+		#create a connection
 		self.conn = sqlite3.connect('SRF_RecordsDB.db')
-		pass
-		
-	#create main table
-	def create_record_table(self):
 		self.cursor = self.conn.cursor()
-		self.cursor.execute('''CREATE TABLE UserFinanRecords (usr_name TEXT, date TEXT, recordNum TEXT, income REAL, income_s TEXT, expense REAL, expense_s TEXT, remark TEXT)''')
+		self.sql_create_record_table()
+		
+	#create main table if not exists
+	def sql_create_record_table(self):	
+		self.cursor.execute('''CREATE TABLE IF NOT EXISTS UserFinanRecords (usr_name TEXT, date TEXT, recordNum TEXT, income REAL, income_s TEXT, expense REAL, expense_s TEXT, remark TEXT)''')
 				
 	#insert one record
-	def insert_one_record(self):
-		self.cursor.execute("INSERT INTO UserFinanRecords VALUES ('%s','%s','%s',%f, '%s', %f, '%s' '%s')" 
-							%(self.usr_name, self.record_date, self.record_num, self.record_income, self.record_income_s, self.record_expense, self.record_expense_s))
+	def sql_insert_one_record(self, record_info = {}):
+		self.cursor.execute("INSERT INTO UserFinanRecords VALUES (?,?,?,?,?,?,?,?)", \
+							(record_info['name'], record_info['date'], record_info['record_no'], float(record_info['income']), record_info['income_s'], float(record_info['expense']), record_info['expense_s'], record_info['comment'],))
 		
+	#update one record
+	def sql_update_one_record(self, new_record_info):
+		pass
+	
+	#query one record
+	def sql_query_one_record(self, record_number):
+		self.cursor.execute("SELECT * FROM UserFinanRecords WHERE recordNum = ?", (record_number,))
+		res = self.cursor.fetchall()
 		
+		if len(res):
+			sql_query_res = {}
+			sql_query_res['name'] = res[0][0]
+			sql_query_res['date'] = res[0][1]
+			sql_query_res['record_no'] = res[0][2]
+			sql_query_res['income'] = res[0][3]
+			sql_query_res['income_s'] = res[0][4]
+			sql_query_res['expense'] = res[0][5]
+			sql_query_res['expense_s'] = res[0][6]
+			sql_query_res['comment'] = res[0][7]
+		
+			return sql_query_res
+		else:
+			return False
 	#delete one record
 	def delete_one_record(self):
 		pass
 		
 	def close_sqlite(self):
-		pass
+		self.cursor.close()
+		self.conn.commit()
+		self.conn.close()
 		

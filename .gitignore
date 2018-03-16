@@ -104,3 +104,4 @@ ENV/
 pictures/
 usrs_info.pickle
 usrs_info_defaul.pickle
+SRF_RecordsDB.db
