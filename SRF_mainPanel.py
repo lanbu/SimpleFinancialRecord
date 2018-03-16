@@ -12,6 +12,7 @@ import tkinter.messagebox
 import sqlite3
 from SRF_sqlite import *
 import SRF_sqlite
+import SFR_login
 
 
 
@@ -171,20 +172,24 @@ class MainPanelServer(Toplevel):
 				if self.one_record['expense'] == '':
 					self.one_record['expense'] = 0.0
 					
+		#need acquire thread lock	
 		self.sqlite_records.sql_insert_one_record(self.one_record)
+		#need release thread lock
 		
 	#search a history record_no
 	def bnt_search_record(self):
 		record_number = self.record_no_search_var.get()
 		if record_number == '':
 			tkinter.messagebox.showinfo('Search', '搜索订单编号不能为空！')
-		else:			
+		else:
+			#need acquire thread lock
 			search_res = self.sqlite_records.sql_query_one_record(record_number)
+			#need release thread lock
 		
 			if search_res == False:
 				tkinter.messagebox.showinfo('Search Result', '无订单记录')
 			else:
-				self.search_win = ChildPanelSearch(self, search_res)				
+				self.search_win = ChildPanelSearch(self, search_res, sql_api = self.sqlite_records)				
 				
 	#update the gross profit
 	def bnt_update_gross_profit(self):
@@ -210,8 +215,8 @@ class MainPanelClient(Toplevel):
 		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2
 		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
 		self.client_gui_init()
-		#sqlite init
-		self.sqlite_records = FinancialDataRecord()
+		#tcpip init for record store or search
+		
 		
 	#destroy the window
 	def destroy(self):
@@ -325,7 +330,8 @@ class MainPanelClient(Toplevel):
 				if self.one_record['expense'] == '':
 					self.one_record['expense'] = 0.0
 					
-		self.sqlite_records.sql_insert_one_record(self.one_record)
+		#transfer record to master through tcpip
+		pass
 		
 	#search a history record_no
 	def bnt_search_record(self):
@@ -333,7 +339,8 @@ class MainPanelClient(Toplevel):
 		if record_number == '':
 			tkinter.messagebox.showinfo('Search', '搜索订单编号不能为空！')
 		else:			
-			search_res = self.sqlite_records.sql_query_one_record(record_number)
+			#send the quest for record to master and wait for the record returned
+			search_res = False
 		
 			if search_res == False:
 				tkinter.messagebox.showinfo('Search Result', '无订单记录')
@@ -346,10 +353,12 @@ class MainPanelClient(Toplevel):
 #search panel
 class ChildPanelSearch(Toplevel):
 	#init
-	def __init__(self, master = None, search_res = None):
+	def __init__(self, master = None, search_res = None, sql_api = None, tcpip_api = None):
 		Toplevel.__init__(self, master)
 		self.search_result = search_res
-		self.is_modify = True	
+		self.is_modify = True
+		self.sql_api = sql_api
+		self.tcpip_api = tcpip_api
 		win_width = 860
 		win_height = 130
 		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
@@ -366,29 +375,29 @@ class ChildPanelSearch(Toplevel):
 		#row 0		
 		self.record_no_lbl = ttk.Label(self.gui_frame, text = '订单编号:')
 		self.record_no_var = StringVar()
-		self.record_no = ttk.Entry(self.gui_frame, textvariable = self.record_no_var)
+		self.record_no = ttk.Entry(self.gui_frame, textvariable = self.record_no_var, state = 'disabled', font = 'Helvetica 8 bold')
 		self.date_lbl = ttk.Label(self.gui_frame, text = '日期(可选):')
 		self.date_var = StringVar()
-		self.date = ttk.Entry(self.gui_frame, textvariable = self.date_var)
+		self.date = ttk.Entry(self.gui_frame, textvariable = self.date_var, state = 'disabled', font = 'Helvetica 8 bold')
 		self.income_lbl = ttk.Label(self.gui_frame, text = '收入:')
 		self.income_var = StringVar()
-		self.income = ttk.Entry(self.gui_frame, textvariable = self.income_var)
+		self.income = ttk.Entry(self.gui_frame, textvariable = self.income_var, state = 'disabled', font = 'Helvetica 8 bold')
 		self.expense_lbl = ttk.Label(self.gui_frame, text = '支出:')
 		self.expense_var = StringVar()
-		self.expense = ttk.Entry(self.gui_frame, textvariable = self.expense_var)
+		self.expense = ttk.Entry(self.gui_frame, textvariable = self.expense_var, state = 'disabled', font = 'Helvetica 8 bold')
 		#row 1
 		self.income_relate_lbl = ttk.Label(self.gui_frame, text = '收入关联:')
 		self.income_relate_var = StringVar()
-		self.income_relate = ttk.Entry(self.gui_frame, textvariable = self.income_relate_var)
+		self.income_relate = ttk.Entry(self.gui_frame, textvariable = self.income_relate_var, state = 'disabled', font = 'Helvetica 8 bold')
 		self.income_relate['width'] = self.income_relate['width'] * 2
 		self.expense_relate_lbl = ttk.Label(self.gui_frame, text = '支出关联:')
 		self.expense_relate_var = StringVar()
-		self.expense_relate = ttk.Entry(self.gui_frame, textvariable = self.expense_relate_var)
+		self.expense_relate = ttk.Entry(self.gui_frame, textvariable = self.expense_relate_var, state = 'disabled', font = 'Helvetica 8 bold')
 		self.expense_relate['width'] = self.expense_relate['width'] * 2
 		#row 2
 		self.comment_lbl = ttk.Label(self.gui_frame, text = '备注:')
 		self.comment_var = StringVar()
-		self.comment = ttk.Entry(self.gui_frame, textvariable = self.comment_var)
+		self.comment = ttk.Entry(self.gui_frame, textvariable = self.comment_var, state = 'disabled', font = 'Helvetica 8 bold')
 		self.comment['width'] = self.comment['width'] * 5
 		#row 3
 		self.search_sure_bnt = ttk.Button(self.gui_frame, text = '确认', command = self.btn_search_sure)
@@ -448,10 +457,47 @@ class ChildPanelSearch(Toplevel):
 		if self.is_modify:
 			self.bnt_modify_text.set('保存')
 			self.is_modify = False
+			self.en_disable_records_modify('enabled')
 		else:
 			self.is_modify = True
+			#save the change
+			if self.sql_api != None:	#master call
+				self.save_modify_master()
+			elif self.tcpip_api != None:
+				self.save_modify_client()
+			else:
+				pass
 			self.bnt_modify_text.set('修改')
-			
+			self.en_disable_records_modify('disabled')
+	
+	#enable or disable the widgets
+	def en_disable_records_modify(self, is_en_disable):
+		if is_en_disable in ('disabled', 'enabled'):
+			self.record_no['state'] = is_en_disable
+			self.date['state'] = is_en_disable
+			self.income['state'] = is_en_disable
+			self.income_relate['state'] = is_en_disable
+			self.expense['state'] = is_en_disable
+			self.expense_relate['state'] = is_en_disable
+			self.comment['state'] = is_en_disable
+
+	#save/modify action for master
+	def save_modify_master(self):
+		modifed_records = {}
+		modifed_records['name'] = self.search_result['name']
+		modifed_records['record_no'] = self.record_no_var.get()
+		modifed_records['date'] = self.date_var.get()
+		modifed_records['income'] = self.income_var.get()
+		modifed_records['income_s'] = self.income_relate_var.get()
+		modifed_records['expense'] = self.expense_var.get()
+		modifed_records['expense_s'] = self.expense_relate_var.get()
+		modifed_records['comment'] = self.comment_var.get()
+		
+		self.sql_api.sql_update_one_record(self.search_result['record_no'], modifed_records)
+	
+	#save/modify action for client
+	def save_modify_client(self):
+		pass
 ############################################## panel for user manage#################################	
 class UserPanelManage(Toplevel):
 	#init

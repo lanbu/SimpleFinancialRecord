@@ -192,5 +192,4 @@ class SignIn(Toplevel):
 # main		
 if __name__ == '__main__':
 	app_login = Login()		
-	
 	app_login.mainloop()

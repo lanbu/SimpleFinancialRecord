@@ -34,8 +34,12 @@ class FinancialDataRecord():
 							(record_info['name'], record_info['date'], record_info['record_no'], float(record_info['income']), record_info['income_s'], float(record_info['expense']), record_info['expense_s'], record_info['comment'],))
 		
 	#update one record
-	def sql_update_one_record(self, new_record_info):
-		pass
+	def sql_update_one_record(self, old_record_no, record_info = {}):
+		#at first delete the old record
+		self.cursor.execute("DELETE FROM UserFinanRecords WHERE recordNum = ?", (old_record_no,))
+		#add the new record
+		self.cursor.execute("INSERT INTO UserFinanRecords VALUES (?,?,?,?,?,?,?,?)", \
+							(record_info['name'], record_info['date'], record_info['record_no'], float(record_info['income']), record_info['income_s'], float(record_info['expense']), record_info['expense_s'], record_info['comment'],))
 	
 	#query one record
 	def sql_query_one_record(self, record_number):
@@ -57,7 +61,7 @@ class FinancialDataRecord():
 		else:
 			return False
 	#delete one record
-	def delete_one_record(self):
+	def delete_one_record(self, new_record = None):
 		pass
 		
 	def close_sqlite(self):
