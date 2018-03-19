@@ -61,8 +61,9 @@ class FinancialDataRecord():
 		else:
 			return False
 	#delete one record
-	def delete_one_record(self, new_record = None):
-		pass
+	def delete_one_record(self, record_num = None):
+		#delete record
+		self.cursor.execute("DELETE FROM UserFinanRecords WHERE recordNum = ?", (record_num,))
 		
 	def close_sqlite(self):
 		self.cursor.close()

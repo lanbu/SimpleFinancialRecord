@@ -39,8 +39,8 @@ class Login(Tk):
 		self.canvas.pack(side = 'top')
 		#user information
 		#set label
-		Label(self, text = 'User name:').place(x = 50, y = 150)
-		Label(self, text = 'Password:').place(x = 50, y = 190)		
+		Label(self, text = '用户名:').place(x = 50, y = 150)
+		Label(self, text = '密码:').place(x = 50, y = 190)		
 		#login user name input
 		self.var_usr_name = StringVar()
 		entry_usr_name = Entry(self, textvariable = self.var_usr_name)
@@ -111,7 +111,7 @@ class Login(Tk):
 					self.user_role = 0
 				self.mainPanel = MainPanel(self, self.user_role, self.usr_name)
 			else:
-				tkinter.messagebox.showerror(message = 'Error, your password is wrong!')
+				tkinter.messagebox.showerror(message = '输入密码错误！')
 		
 	#user sign up
 	def usr_sign_up(self):
@@ -120,7 +120,7 @@ class Login(Tk):
 		if self.usr_name == self.administor_name and self.usr_pwd == self.administor_pwd:
 			self.signin_win = SignIn(self, self.login_userinfo_path)
 		else:
-			tkinter.messagebox.showinfo(title = 'Notice', message = 'Sorry! You are not Administrator.')
+			tkinter.messagebox.showinfo(title = '提示', message = '只能管理员操作！')
 	
 #sign in window class
 class SignIn(Toplevel):
@@ -138,17 +138,17 @@ class SignIn(Toplevel):
 		
 	def sign_in_win(self):
 		#sign in name
-		Label(self, text = 'User name').place(x = 10, y = 10)
+		Label(self, text = '用户名:').place(x = 10, y = 10)
 		self.sign_name_var = StringVar()
 		sign_name_entry = Entry(self, textvariable = self.sign_name_var)
 		sign_name_entry.place(x = 150, y = 10)
 		#sign in password
-		Label(self, text = 'Password').place(x = 10, y = 50)
+		Label(self, text = '密码:').place(x = 10, y = 50)
 		self.sign_pwd_var = StringVar()
 		sign_pwd_entry = Entry(self, textvariable = self.sign_pwd_var)
 		sign_pwd_entry.place(x = 150, y = 50)
 		#sign in password confirm
-		Label(self, text = 'Confirm Password').place(x = 10, y = 90)
+		Label(self, text = '确认密码:').place(x = 10, y = 90)
 		self.sign_pwd_confi_var = StringVar()
 		sign_pwd_confi_entry = Entry(self, textvariable = self.sign_pwd_confi_var)
 		sign_pwd_confi_entry.place(x = 150, y = 90)
@@ -168,22 +168,22 @@ class SignIn(Toplevel):
 			with open(self.login_userInfo_path, 'rb') as usr_file:
 				exist_usr_info = pickle.load(usr_file)
 			if 	new_pwd != new_pwd_confirm:
-				tkinter.messagebox.showerror('Error', 'Password and confirm password must be the same')
+				tkinter.messagebox.showerror('Error', '两次密码输入不一致')
 				#lift the sign up window to the top
 				self.lift(self.master)
 			elif new_name in exist_usr_info:
-				tkinter.messagebox.showerror('Error', 'The user has already signed up')
+				tkinter.messagebox.showerror('Error', '用户已经存在')
 				#lift the sign up window to the top
 				self.lift(self.master)
 			else:
 				exist_usr_info[new_name] = new_pwd
 				with open(self.login_userInfo_path, 'wb') as usr_file:
 					pickle.dump(exist_usr_info, usr_file)
-				tkinter.messagebox.showinfo('welcome', 'Succeed Signed Up')
+				tkinter.messagebox.showinfo('恭喜', '注册成功！')
 				self.master.reset_login_info(self.sign_name_var.get())
 				self.destroy()
 		else:	
-			tkinter.messagebox.showinfo('Warning', 'Illegal Input')
+			tkinter.messagebox.showinfo('警告', '非法输入')
 			#lift the sign up window to the top
 			self.lift(self.master)	
 	def sign_cancel_callback(self):		

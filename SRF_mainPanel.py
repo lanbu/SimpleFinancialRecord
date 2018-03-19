@@ -13,6 +13,7 @@ import sqlite3
 from SRF_sqlite import *
 import SRF_sqlite
 import SFR_login
+import time
 
 
 
@@ -175,6 +176,8 @@ class MainPanelServer(Toplevel):
 		#need acquire thread lock	
 		self.sqlite_records.sql_insert_one_record(self.one_record)
 		#need release thread lock
+		
+		tkinter.messagebox.showinfo('Tips', '创建订单成功！')
 		
 	#search a history record_no
 	def bnt_search_record(self):
@@ -404,6 +407,7 @@ class ChildPanelSearch(Toplevel):
 		self.bnt_modify_text = StringVar()
 		self.bnt_modify_text.set('修改')
 		self.search_modify_bnt = ttk.Button(self.gui_frame, textvariable = self.bnt_modify_text, command = self.btn_search_saveOrmodify)
+		self.search_delete_bnt = ttk.Button(self.gui_frame, text = '删除', command = self.btn_search_delete)
 		
 		#grid widgets
 		self.gui_frame.grid(column = 0, row = 0, padx = 10)
@@ -431,6 +435,7 @@ class ChildPanelSearch(Toplevel):
 		gui_row = 3
 		self.search_sure_bnt.grid(column = 3, row = gui_row, sticky = W, padx = 3)
 		self.search_modify_bnt.grid(column = 4, row = gui_row, sticky = E, padx = 3)
+		self.search_delete_bnt.grid(column = 5, row = gui_row, sticky = E, padx = 3)
 		
 	#init search result
 	def search_dispaly_init(self):
@@ -470,6 +475,21 @@ class ChildPanelSearch(Toplevel):
 			self.bnt_modify_text.set('修改')
 			self.en_disable_records_modify('disabled')
 	
+	#delete the record
+	def btn_search_delete(self):
+		is_delete = tkinter.messagebox.askyesno(message = '确认删除该记录？删除后不可恢复！', icon = 'question', title = 'ask')
+		if is_delete:
+			self.sql_api.delete_one_record(self.search_result['record_no'])
+			#disable the modify button
+			self.search_modify_bnt['state'] = 'disabled'
+			#clean the dipaly
+			self.record_no_var.set('')
+			self.date_var.set('')
+			self.income_var.set('')
+			self.income_relate_var.set('')
+			self.expense_var.set('')
+			self.expense_relate_var.set('')
+			self.comment_var.set('')
 	#enable or disable the widgets
 	def en_disable_records_modify(self, is_en_disable):
 		if is_en_disable in ('disabled', 'enabled'):
@@ -519,7 +539,8 @@ class UserPanelManage(Toplevel):
 		#row 0
 		self.user_list_lbl = ttk.Label(self.gui_frame, text = '已注册用户列表')
 		#row 1
-		self.user_list_box = Listbox(self.gui_frame, height = 10)
+		self.list_users = StringVar()
+		self.user_list_box = Listbox(self.gui_frame, listvariable = self.list_users, height = 10)
 		self.list_scro = ttk.Scrollbar(self.gui_frame, orient = VERTICAL, command = self.user_list_box.yview) 
 		#row 2
 		self.bnt_sure = ttk.Button(self.gui_frame, text = '确认', command = self.bnt_user_manage_sure)
@@ -539,16 +560,119 @@ class UserPanelManage(Toplevel):
 		self.bnt_delete.grid(column = 1, row = 2)
 		self.bnt_modify.grid(column = 2, row = 2)
 		
+		#init list box of users registered
+		try:
+			with open(self.master.master.login_userinfo_path, 'rb') as usr_file:
+				self.usrs_info = pickle.load(usr_file)
+		except FileNotFoundError:
+			with open(self.master.master.login_userinfo_path, 'wb') as usr_file:
+				self.usrs_info = {self.master.master.administor_name:selfmastr.master.administor_pwd}	#null dictionary			
+				pickle.dump(self.usrs_info, usr_file)		
+		
+		users_list = []
+		for user in self.usrs_info:
+			users_list.append(user)
+		self.list_users.set(users_list)
+		
+		# Colorize alternating lines of the listbox
+		for i in range(0,len(users_list),2):
+			self.user_list_box.itemconfigure(i, background='#f0f0ff')
+		#select the first one as default
+		self.user_list_box.selection_set(0)
+		
 	#sure
 	def bnt_user_manage_sure(self):
 		self.destroy()
 	
 	#delete
 	def bnt_user_manage_del(self):
-		is_delete = tkinter.messagebox.askyesno(message = '确认删除该用户？', icon = 'question', title = 'ask')
-		if is_delete == True:
-			pass
+		idxs = self.user_list_box.curselection()
+		if len(idxs) == 1:
+			selected_user = self.user_list_box.get(int(idxs[0]))
+		
+			if selected_user == 'admin':
+				tkinter.messagebox.showinfo('警告', '不能删除该用户！')
+			else:
+				is_delete = tkinter.messagebox.askyesno(message = '确认删除该用户？', icon = 'question', title = 'ask')
+				if is_delete == True:
+					self.usrs_info.pop(selected_user)
+					#rewrite the users file
+					with open(self.master.master.login_userinfo_path, 'wb') as usr_file:
+						pickle.dump(self.usrs_info, usr_file)
+						#succeed delete
+						tkinter.messagebox.showinfo('确认', '删除成功！')	
+						self.user_list_box.delete(int(idxs[0]))
 			
 	#modify
 	def bnt_user_modify(self):
-		pass
+		idxs = self.user_list_box.curselection()
+		if len(idxs) == 1:
+			selected_user = self.user_list_box.get(int(idxs[0]))
+		
+			if selected_user == 'admin':
+				tkinter.messagebox.showinfo('警告', '不能修改该用户！')
+			else:
+				self.modify_win = NewPasswordPanel(self)						
+					
+	#set new pwd
+	def bnt_set_new_pwd(self, new_pwd):
+		idxs = self.user_list_box.curselection()
+		if len(idxs) == 1:
+			selected_user = self.user_list_box.get(int(idxs[0]))
+			
+			self.usrs_info[selected_user] = new_pwd
+			#rewrite the users file
+			with open(self.master.master.login_userinfo_path, 'wb') as usr_file:
+				pickle.dump(self.usrs_info, usr_file)
+				
+############################################## panel for new password #################################
+class NewPasswordPanel(Toplevel):
+	def __init__(self, master = None):
+		Toplevel.__init__(self, master)
+		win_width = 307
+		win_height = 120
+		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
+		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2
+		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
+		#mange gui init
+		self.newpwd_win_int()	
+		
+	#gui init
+	def newpwd_win_int(self):
+		self.title('修改密码')
+		self.gui_frame = ttk.Frame(self)		
+		#row 0
+		self.pwd_lbl = ttk.Label(self.gui_frame, text = '密码:')
+		self.pwd_var = StringVar()
+		self.pwd = ttk.Entry(self.gui_frame, textvariable = self.pwd_var)
+		#row 1
+		self.pwd_config_lbl = ttk.Label(self.gui_frame, text = '确认密码:')
+		self.pwd_config_var = StringVar()
+		self.pwd_config = ttk.Entry(self.gui_frame, textvariable = self.pwd_config_var)
+		#row 2
+		self.pwd_sure = ttk.Button(self.gui_frame, text = '确认', command = self.bnt_pwd_sure)
+		self.pwd_cancel = ttk.Button(self.gui_frame, text = '取消', command = self.bnt_pwd_cancle)
+		
+		#grid widgets
+		self.gui_frame.grid(column = 0, row = 0, padx = 10)
+		#row 0
+		self.pwd_lbl.grid(column = 0, row = 0, padx = 5, pady = 10)
+		self.pwd.grid(column = 1, row = 0)
+		#row 1
+		self.pwd_config_lbl.grid(column = 0, row = 1, padx = 5)
+		self.pwd_config.grid(column = 1, row = 1)
+		#row 2
+		self.pwd_sure.grid(column = 0, row = 2, padx = 15, pady = 10)
+		self.pwd_cancel.grid(column = 1, row = 2)
+
+	def bnt_pwd_sure(self):
+		if self.pwd_var.get() == self.pwd_config_var.get():
+			is_modify_pwd = tkinter.messagebox.askyesno(message = '确认修改密码？', icon = 'question', title = 'ask')
+			if is_modify_pwd:
+				self.master.bnt_set_new_pwd(self.pwd_var.get())
+				self.destroy()
+		else:
+			tkinter.messagebox.showinfo("Warning", '两次密码不一致！')
+
+	def bnt_pwd_cancle(self):
+		self.destroy()	
