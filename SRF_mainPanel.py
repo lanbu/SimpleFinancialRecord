@@ -14,6 +14,7 @@ from SRF_sqlite import *
 import SRF_sqlite
 import SFR_login
 import time
+from SRF_tcpip import *
 
 
 
@@ -49,10 +50,14 @@ class MainPanelServer(Toplevel):
 		self.server_gui_init()
 		#sqlite init
 		self.sqlite_records = FinancialDataRecord()
+		#tcpip init
+		self.tcpip_server = TCPIP_server(ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100)
+		self.tcpip_server.start()
 		
 	def destroy(self):
 		is_quit = tkinter.messagebox.askyesno(message = '确认退出？', icon = 'question', title = 'quit')
 		if is_quit == True:
+			self.tcpip_server.server_close()
 			self.sqlite_records.close_sqlite()
 			self.quit()
 		
