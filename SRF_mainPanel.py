@@ -26,11 +26,7 @@ class MainPanel():
 			self.server_panel = MainPanelServer(master, user_name)
 		else:	#client main panel
 			self.client_panel = MainPanelClient(master, user_name)
-		#connect sqlite
-		#self.finiancial_record = FinancialDataRecord()
-		
-		#tcpip server
-	
+				
 
 ################################ main panel for server ########################################	
 #server main panel
@@ -51,7 +47,7 @@ class MainPanelServer(Toplevel):
 		#sqlite init
 		self.sqlite_records = FinancialDataRecord()
 		#tcpip init
-		self.tcpip_server = TCPIP_server(ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100)
+		self.tcpip_server = TCPIP_server(ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100, sqlite_oper = self.sqlite_records)
 		self.tcpip_server.start()
 		
 	def destroy(self):

@@ -7,16 +7,19 @@ __author__ = 'Lanbu'
 
 import socket
 import time, threading
+from SRF_tcpip_protocol import *
+from SRF_sqlite import *
 
 ############################################# tcpip server ####################################################
 class TCPIP_server(threading.Thread):
-	def __init__(self, ip_addr, ip_port, ip_max_num):
+	def __init__(self, ip_addr, ip_port, ip_max_num, sqlite_oper):
 		threading.Thread.__init__(self, daemon = True)
 		#bind
 		self.is_loop_ok	= True
 		self.s_ip_addr = ip_addr
 		self.s_ip_port = ip_port
 		self.s_max_num = ip_max_num
+		self.sqlite_oper = sqlite_oper
 		
 	#server loop
 	def run(self):
@@ -28,7 +31,7 @@ class TCPIP_server(threading.Thread):
 		#loop
 		while self.is_loop_ok:
 			s_client, addr_client = self.s_server.accept()
-			new_conn_thread = Server_connect_client(s_client, addr_client)
+			new_conn_thread = Server_connect_client(s_client, addr_client, self.sqlite_oper)
 			new_conn_thread.start()
 		self.s_server.close()
 		
@@ -38,12 +41,13 @@ class TCPIP_server(threading.Thread):
 
 		
 class Server_connect_client(threading.Thread):
-	def __init__(self, sock_client, addr_client):
+	def __init__(self, sock_client, addr_client, sqlite_oper):
 		threading.Thread.__init__(self, daemon = True)
 		self.sock = sock_client
 		self.addr = addr_client
 		self.is_disconnected = True
 		self.pack_data = None
+		self.sqlite_oper = sqlite_oper
 		
 	def run(self):		
 		while self.is_disconnected:
@@ -51,7 +55,6 @@ class Server_connect_client(threading.Thread):
 				data = self.sock.recv(1024)
 				if len(data) != 0:
 					#process the data
-					print(data)
 					self.data_pack_process(data)
 			except:
 				self.sock.close()
@@ -59,17 +62,7 @@ class Server_connect_client(threading.Thread):
 				print('client disconnected')
 				
 	def data_pack_process(self, recv_data):
-		pack_head_b = recv_data[0:13]
-		pack_type = recv_data[8]	
-
-		#if pack_head_b == b'client2server':
-		#if pack_type == b'\x00':	#ask for query
-			#print('query')
-		#elif pack_type == b'\x01':	#ask for store
-			#self.pack_data = recv_data[9:].decode()
-			#print('store')
-		#else:
-		print('error')
+		pass
 ############################################### tcpip client ################################################		
 class TCPIP_client():
 	def __init__(self, ip_addr, ip_port):
