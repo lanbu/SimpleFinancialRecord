@@ -24,17 +24,31 @@ class selftocol():
 		
 	#pack decode
 	def pack_decode(self, data_stream):
-		pack_head_b = recv_data[0:self.packHead_len]
-		pack_type = recv_data[self.packHead_len]	
-		
-		if pack_head_b == self.packHead_client2server:	#pack head check		
-			if pack_type == self.packType_query:		#pack type check -- ask for query
-				self.pack_data = recv_data[self.packData_start_pos :].decode()
-			
-			elif pack_type == self.packType_store:	#pack type check -- ask for store
-				self.pack_data = recv_data[self.packData_start_pos :].decode()
-				print('store')
-			else:
-				print('error')
-		else:
-			print('head error')
+		if len(data_stream) > (self.packHead_len + 2):
+			#packet head
+			pack_head_b = data_stream[0:self.packHead_len]
+			if pack_head_b == self.packHead_client2server:	#pack head check
+				#packet length
+				pack_data_len = 0
+				pack_data_len = data_stream[self.packHead_len]
+				pack_data_len <<= 8
+				pack_data_len += data_stream[self.packHead_len + 1]
+				
+				if pack_data_len > 0:		
+					#packet type	
+					pack_data_start = self.packHead_len + 2
+					pack_type = data_stream[pack_data_start]			
+					if pack_type == self.packType_query:		#pack type check -- ask for query
+						#name
+						pack_name_pos_start = pack_data_start + 1
+						pack_name_pos_end = pack_data_start + data_stream[pack_data_start + 1] + 1
+						self.pack_name = data_stream[pack_name_pos_start : pack_name_pos_end].decode()
+						#record number
+						pack_record_pos_start = pack_name_pos_end + 1
+						pack_record_pos_end = data_stream[pack_name_pos_end] + pack_record_pos_start + 1
+						self pack_recordno = data_stream[pack_record_pos_start : pack_record_pos_end].decode()
+					elif pack_type == self.packType_store:	#pack type check -- ask for store
+						self.pack_data = data_stream[self.packData_start_pos :].decode()
+						print('store')
+					else:
+						print('error')
