@@ -69,16 +69,4 @@ class FinancialDataRecord():
 		self.cursor.close()
 		self.conn.commit()
 		self.conn.close()
-
-#literal for user's sqlite database
-class DatabaseNameLiteral():
-	def __init__(self)
-		self.usr_name_liter = 'name'
-		self.record_date_liter = 'date'
-		self.record_num_liter = 'record_no'
-		self.record_income_liter = 'income'
-		self.record_income_s_liter = 'income_s'
-		self.record_expense_liter = 'expense'
-		self.record_expense_s_liter = 'expense_s'
-		self.record_remark_liter = 'comment'
 		

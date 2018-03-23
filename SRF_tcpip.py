@@ -10,6 +10,7 @@ import time, threading
 from SRF_tcpip_protocol import *
 from SRF_sqlite import *
 
+
 ############################################# tcpip server ####################################################
 class TCPIP_server(threading.Thread):
 	def __init__(self, ip_addr, ip_port, ip_max_num, sqlite_oper):
@@ -62,7 +63,14 @@ class Server_connect_client(threading.Thread):
 				print('client disconnected')
 				
 	def data_pack_process(self, recv_data):
-		pass
+		data_extract = TcpipProtocol()
+		res_info = data_extract.pack_decode(recv_data)
+		
+		if res_info != False:
+			print(res_info)
+		else:
+			print('pack error')
+		
 ############################################### tcpip client ################################################		
 class TCPIP_client():
 	def __init__(self, ip_addr, ip_port):
