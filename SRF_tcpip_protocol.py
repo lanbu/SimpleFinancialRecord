@@ -22,7 +22,7 @@ class TcpipProtocol():
 	def __init__(self):
 		#server to client
 		self.packHead_server2client = b'server2client'
-		self.packType_query_ack = 1
+		self.packType_query_ack = 0
 		self.packType_store_ack = 1
 		
 		#client to server
@@ -49,7 +49,7 @@ class TcpipProtocol():
 				pack_data_len = data_stream[self.packHead_len]
 				pack_data_len <<= 8
 				pack_data_len += data_stream[self.packHead_len + 1]
-				
+
 				if pack_data_len > 0:		
 					#packet type	
 					pack_data_start = self.packHead_len + 2
@@ -65,9 +65,51 @@ class TcpipProtocol():
 						pack_record_pos_end = data_stream[pack_name_pos_end] + pack_record_pos_start
 						pack_recordno = data_stream[pack_record_pos_start : pack_record_pos_end].decode()
 						decoded_pack[inf_literal.record_num_liter] = pack_recordno
+						
+						decode_pack_type = self.packType_query
 					elif pack_type == self.packType_store:	#pack type check -- ask for store
-						self.pack_data = data_stream[self.packData_start_pos :].decode()
-						print('store')
+						#name
+						pack_name_pos_start = pack_data_start + 2
+						pack_name_pos_end = pack_name_pos_start + data_stream[pack_data_start + 1]
+						pack_name = data_stream[pack_name_pos_start : pack_name_pos_end].decode()
+						decoded_pack[inf_literal.usr_name_liter] = pack_name
+						#date
+						pack_date_pos_start = pack_name_pos_end + 1
+						pack_date_pos_end = pack_date_pos_start + data_stream[pack_name_pos_end]
+						pack_date = data_stream[pack_date_pos_start : pack_date_pos_end].decode()
+						decoded_pack[inf_literal.record_date_liter] = pack_date
+						#record number
+						pack_record_pos_start = pack_date_pos_end + 1
+						pack_record_pos_end = data_stream[pack_date_pos_end] + pack_record_pos_start
+						pack_recordno = data_stream[pack_record_pos_start : pack_record_pos_end].decode()
+						decoded_pack[inf_literal.record_num_liter] = pack_recordno
+						#income
+						pack_income_pos_start = pack_record_pos_end + 1
+						pack_income_pos_end = data_stream[pack_record_pos_end] + pack_income_pos_start
+						pack_income = data_stream[pack_income_pos_start : pack_income_pos_end].decode()
+						decoded_pack[inf_literal.record_income_liter] = pack_income
+						#income related
+						pack_income_s_pos_start = pack_income_pos_end + 1
+						pack_income_s_pos_end = data_stream[pack_income_pos_end] + pack_income_s_pos_start
+						pack_income_s = data_stream[pack_income_s_pos_start : pack_income_s_pos_end].decode()
+						decoded_pack[inf_literal.record_income_s_liter] = pack_income_s
+						#expense
+						pack_expense_pos_start = pack_income_s_pos_end + 1
+						pack_expense_pos_end = data_stream[pack_income_s_pos_end] + pack_expense_pos_start
+						pack_expense = data_stream[pack_expense_pos_start : pack_expense_pos_end].decode()
+						decoded_pack[inf_literal.record_expense_liter] = pack_expense
+						#expense related
+						pack_expense_s_pos_start = pack_expense_pos_end + 1
+						pack_expense_s_pos_end = data_stream[pack_expense_pos_end] + pack_expense_s_pos_start
+						pack_expense_s = data_stream[pack_expense_s_pos_start : pack_expense_s_pos_end].decode()
+						decoded_pack[inf_literal.record_expense_s_liter] = pack_expense_s
+						#comment
+						pack_comment_pos_start = pack_expense_s_pos_end + 1
+						pack_comment_pos_end = data_stream[pack_expense_s_pos_end] + pack_comment_pos_start
+						pack_comment = data_stream[pack_comment_pos_start : pack_comment_pos_end].decode()
+						decoded_pack[inf_literal.record_remark_liter] = pack_comment
+						
+						decode_pack_type = self.packType_store
 					else:
 						decoded_pack = False						
 				else:
@@ -78,4 +120,16 @@ class TcpipProtocol():
 			decoded_pack = False
 		
 		#return decoded packet
-		return decoded_pack
+		return decode_pack_type, decoded_pack
+		
+	#pack encode
+	def pack_encode(self, pack_data):
+		encoded_data = self.packHead_server2client.encode()
+		if pack_data != False:
+			pass
+		else:
+			pass 
+			
+		return encoded_data	
+			
+			

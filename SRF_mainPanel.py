@@ -47,7 +47,7 @@ class MainPanelServer(Toplevel):
 		#sqlite init
 		self.sqlite_records = FinancialDataRecord()
 		#tcpip init
-		self.tcpip_server = TCPIP_server(ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100, sqlite_oper = self.sqlite_records)
+		self.tcpip_server = TCPIP_server(self, ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100)
 		self.tcpip_server.start()
 		
 	def destroy(self):
@@ -202,7 +202,11 @@ class MainPanelServer(Toplevel):
 	#manage the registered user
 	def bnt_manage_users(self):
 		UserPanelManage(self)
-		
+	
+	#interface for sqlite operation
+	def sqlite_data_query(self, record_num):
+		search_res = self.sqlite_records.sql_query_one_record(record_num)
+		return search_res
 ######################################## main panel for client ###################################		
 #client main panel
 class MainPanelClient(Toplevel):

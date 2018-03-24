@@ -13,15 +13,14 @@ from SRF_sqlite import *
 
 ############################################# tcpip server ####################################################
 class TCPIP_server(threading.Thread):
-	def __init__(self, ip_addr, ip_port, ip_max_num, sqlite_oper):
+	def __init__(self, master = None, ip_addr = None, ip_port = None, ip_max_num = None):
 		threading.Thread.__init__(self, daemon = True)
 		#bind
 		self.is_loop_ok	= True
 		self.s_ip_addr = ip_addr
 		self.s_ip_port = ip_port
 		self.s_max_num = ip_max_num
-		self.sqlite_oper = sqlite_oper
-		
+		self.master = master
 	#server loop
 	def run(self):
 		#init server
@@ -32,7 +31,7 @@ class TCPIP_server(threading.Thread):
 		#loop
 		while self.is_loop_ok:
 			s_client, addr_client = self.s_server.accept()
-			new_conn_thread = Server_connect_client(s_client, addr_client, self.sqlite_oper)
+			new_conn_thread = Server_connect_client(self.master, s_client, addr_client)
 			new_conn_thread.start()
 		self.s_server.close()
 		
@@ -42,13 +41,13 @@ class TCPIP_server(threading.Thread):
 
 		
 class Server_connect_client(threading.Thread):
-	def __init__(self, sock_client, addr_client, sqlite_oper):
+	def __init__(self, master = None, sock_client = None, addr_client = None):
 		threading.Thread.__init__(self, daemon = True)
 		self.sock = sock_client
 		self.addr = addr_client
 		self.is_disconnected = True
 		self.pack_data = None
-		self.sqlite_oper = sqlite_oper
+		self.grandfather = master
 		
 	def run(self):		
 		while self.is_disconnected:
@@ -64,10 +63,24 @@ class Server_connect_client(threading.Thread):
 				
 	def data_pack_process(self, recv_data):
 		data_extract = TcpipProtocol()
-		res_info = data_extract.pack_decode(recv_data)
-		
+		pack_type, res_info = data_extract.pack_decode(recv_data)
+		print(res_info)
 		if res_info != False:
-			print(res_info)
+			info_literal = UserRecordInfoLiteral()
+			if pack_type == data_extract.packType_query:
+				#query
+				print(res_info[info_literal.record_num_liter])
+				print(self.grandfather.__name__)
+				#res_query = self.grandfather.sqlite_data_query('123')
+				#print(res_query)
+				#encode and send the query result to client
+				#encoded_data = data_extract.pack_encode(res_query)
+				#self.sock(encode_data)
+				#print(encode_data)
+			elif pack_type == data_extract.packType_store:
+				print('store')
+			else:
+				pass
 		else:
 			print('pack error')
 		
