@@ -10,12 +10,11 @@ from tkinter import ttk
 import pickle
 import tkinter.messagebox
 import sqlite3
-from SRF_sqlite import *
 import SRF_sqlite
 import SFR_login
 import time
-from SRF_tcpip import *
-
+from SRF_server_task import *
+import queue
 
 
 class MainPanel():
@@ -42,21 +41,19 @@ class MainPanelServer(Toplevel):
 		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
 		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2
 		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
+		#queue
+		self.gui2server_queue = queue.Queue()
 		#gui init
 		self.server_gui_init()
-		#sqlite init
-		self.sqlite_records = FinancialDataRecord()
-		#tcpip init
-		self.tcpip_server = TCPIP_server(self, ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100)
-		self.tcpip_server.start()
+		#server logic task init
+		self.server_task = ServerLogic(self.gui2server_queue)
+		self.server_task.start()
 		
 	def destroy(self):
 		is_quit = tkinter.messagebox.askyesno(message = '确认退出？', icon = 'question', title = 'quit')
 		if is_quit == True:
-			self.tcpip_server.server_close()
-			self.sqlite_records.close_sqlite()
 			self.quit()
-		
+			self.server_task.server_task_exit()
 	#gui init
 	def server_gui_init(self):
 		self.title('Server Main Panel')
@@ -175,7 +172,7 @@ class MainPanelServer(Toplevel):
 					self.one_record['expense'] = 0.0
 					
 		#need acquire thread lock	
-		self.sqlite_records.sql_insert_one_record(self.one_record)
+		#self.sqlite_records.sql_insert_one_record(self.one_record)
 		#need release thread lock
 		
 		tkinter.messagebox.showinfo('Tips', '创建订单成功！')
@@ -187,14 +184,14 @@ class MainPanelServer(Toplevel):
 			tkinter.messagebox.showinfo('Search', '搜索订单编号不能为空！')
 		else:
 			#need acquire thread lock
-			search_res = self.sqlite_records.sql_query_one_record(record_number)
+			#search_res = self.sqlite_records.sql_query_one_record(record_number)
 			#need release thread lock
 		
 			if search_res == False:
 				tkinter.messagebox.showinfo('Search Result', '无订单记录')
 			else:
-				self.search_win = ChildPanelSearch(self, search_res, sql_api = self.sqlite_records)				
-				
+				#self.search_win = ChildPanelSearch(self, search_res, sql_api = self.sqlite_records)				
+				pass
 	#update the gross profit
 	def bnt_update_gross_profit(self):
 		pass
@@ -203,10 +200,6 @@ class MainPanelServer(Toplevel):
 	def bnt_manage_users(self):
 		UserPanelManage(self)
 	
-	#interface for sqlite operation
-	def sqlite_data_query(self, record_num):
-		search_res = self.sqlite_records.sql_query_one_record(record_num)
-		return search_res
 ######################################## main panel for client ###################################		
 #client main panel
 class MainPanelClient(Toplevel):

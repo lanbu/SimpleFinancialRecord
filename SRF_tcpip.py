@@ -13,14 +13,13 @@ from SRF_sqlite import *
 
 ############################################# tcpip server ####################################################
 class TCPIP_server(threading.Thread):
-	def __init__(self, master = None, ip_addr = None, ip_port = None, ip_max_num = None):
+	def __init__(self, ip_addr = None, ip_port = None, ip_max_num = None):
 		threading.Thread.__init__(self, daemon = True)
 		#bind
 		self.is_loop_ok	= True
 		self.s_ip_addr = ip_addr
 		self.s_ip_port = ip_port
 		self.s_max_num = ip_max_num
-		self.master = master
 	#server loop
 	def run(self):
 		#init server
@@ -31,7 +30,7 @@ class TCPIP_server(threading.Thread):
 		#loop
 		while self.is_loop_ok:
 			s_client, addr_client = self.s_server.accept()
-			new_conn_thread = Server_connect_client(self.master, s_client, addr_client)
+			new_conn_thread = Server_connect_client(s_client, addr_client)
 			new_conn_thread.start()
 		self.s_server.close()
 		
@@ -41,13 +40,12 @@ class TCPIP_server(threading.Thread):
 
 		
 class Server_connect_client(threading.Thread):
-	def __init__(self, master = None, sock_client = None, addr_client = None):
+	def __init__(self, sock_client = None, addr_client = None):
 		threading.Thread.__init__(self, daemon = True)
 		self.sock = sock_client
 		self.addr = addr_client
 		self.is_disconnected = True
 		self.pack_data = None
-		self.grandfather = master
 		
 	def run(self):		
 		while self.is_disconnected:
@@ -70,7 +68,6 @@ class Server_connect_client(threading.Thread):
 			if pack_type == data_extract.packType_query:
 				#query
 				print(res_info[info_literal.record_num_liter])
-				print(self.grandfather.__name__)
 				#res_query = self.grandfather.sqlite_data_query('123')
 				#print(res_query)
 				#encode and send the query result to client
