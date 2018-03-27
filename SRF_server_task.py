@@ -41,11 +41,20 @@ class ServerLogic(threading.Thread):
 					self.server2gui_queue.put({'cmd':'insert', 'res':'ok'})
 				elif queue_message['cmd'] == 'query':
 					queue_message.pop('cmd')
-					pass
+					query_res = self.sqlite_records.sql_query_one_record(queue_message['record_no'])
+					if query_res == False:
+						query_res = {'cmd':'query', 'res':'error'}
+					else:
+						query_res['cmd'] = 'query'
+						query_res['res'] = 'ok'
+					self.server2gui_queue.put(query_res)
 				elif queue_message['cmd'] == 'update':
-					queue_message.pop('cmd')	
-					pass
-		
+					queue_message.pop('cmd')
+					old_no = queue_message['old_no']
+					queue_message.pop('old_no')
+					self.sqlite_records.sql_update_one_record(old_no, queue_message)
+				elif queue_message['cmd'] == 'delete':
+					self.sqlite_records.delete_one_record(queue_message['record_no'])		
 	def server_task_exit(self):
 		self.task_exit = True
 		self.tcpip_server.server_close()

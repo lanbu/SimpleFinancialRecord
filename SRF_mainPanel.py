@@ -156,8 +156,14 @@ class MainPanelServer(Toplevel):
 			queue_item = self.server2gui_queue.get()
 			if queue_item['cmd'] == 'insert' and queue_item['res'] == 'ok':
 				tkinter.messagebox.showinfo('Tips', '创建订单成功！')
-				
-		
+			elif queue_item['cmd'] == 'query':
+				if queue_item['res'] == 'error':
+					tkinter.messagebox.showinfo('Search Result', '无订单记录')
+				else:
+					queue_item.pop('cmd')
+					queue_item.pop('res')
+					self.search_win = ChildPanelSearch(master = self, search_res = queue_item, gui2server_queue = self.gui2server_queue)				
+							
 	#create a new record
 	def bnt_create_new_record(self):
 		self.one_record = {}
@@ -183,10 +189,7 @@ class MainPanelServer(Toplevel):
 					self.one_record['income'] = 0.0
 				if self.one_record['expense'] == '':
 					self.one_record['expense'] = 0.0
-					
-		#need acquire thread lock	
-		#self.sqlite_records.sql_insert_one_record(self.one_record)
-		#need release thread lock
+
 		self.one_record['cmd'] = 'insert'
 		self.gui2server_queue.put(self.one_record)
 			
@@ -197,19 +200,10 @@ class MainPanelServer(Toplevel):
 		if record_number == '':
 			tkinter.messagebox.showinfo('Search', '搜索订单编号不能为空！')
 		else:
-			#need acquire thread lock
-			#search_res = self.sqlite_records.sql_query_one_record(record_number)
-			#need release thread lock
 			query_no = {}
 			query_no['record_no'] = record_number
 			query_no['cmd'] = 'query'
 			self.gui2server_queue.put(query_no)
-		
-			if search_res == False:
-				tkinter.messagebox.showinfo('Search Result', '无订单记录')
-			else:
-				#self.search_win = ChildPanelSearch(self, search_res, sql_api = self.sqlite_records)				
-				pass
 	#update the gross profit
 	def bnt_update_gross_profit(self):
 		pass
@@ -372,12 +366,12 @@ class MainPanelClient(Toplevel):
 #search panel
 class ChildPanelSearch(Toplevel):
 	#init
-	def __init__(self, master = None, search_res = None, sql_api = None, tcpip_api = None):
+	def __init__(self, master = None, search_res = None, tcpip_api = None, gui2server_queue = None):
 		Toplevel.__init__(self, master)
 		self.search_result = search_res
 		self.is_modify = True
-		self.sql_api = sql_api
 		self.tcpip_api = tcpip_api
+		self.server2gui_queue = gui2server_queue
 		win_width = 860
 		win_height = 130
 		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
@@ -462,13 +456,13 @@ class ChildPanelSearch(Toplevel):
 		self.expense_var.set(self.search_result['expense'])
 		self.expense_relate_var.set(self.search_result['expense_s'])
 		self.comment_var.set(self.search_result['comment'])
+		
 	#sure for searching result
 	def btn_search_sure(self):
 		if not self.is_modify:
 			is_quit = tkinter.messagebox.askyesno(message = '是否保存修改？', icon = 'question', title = 'ask')
 			if is_quit == True:
-				self.bnt_modify_text.set('保存')
-				self.is_modify = True
+				self.btn_search_saveOrmodify()
 			else:
 				self.is_modify = False
 		self.destroy()
@@ -482,12 +476,11 @@ class ChildPanelSearch(Toplevel):
 		else:
 			self.is_modify = True
 			#save the change
-			if self.sql_api != None:	#master call
-				self.save_modify_master()
-			elif self.tcpip_api != None:
+			if self.tcpip_api != None:
 				self.save_modify_client()
 			else:
-				pass
+				self.save_modify_master()	#master call
+				
 			self.bnt_modify_text.set('修改')
 			self.en_disable_records_modify('disabled')
 	
@@ -495,7 +488,14 @@ class ChildPanelSearch(Toplevel):
 	def btn_search_delete(self):
 		is_delete = tkinter.messagebox.askyesno(message = '确认删除该记录？删除后不可恢复！', icon = 'question', title = 'ask')
 		if is_delete:
-			self.sql_api.delete_one_record(self.search_result['record_no'])
+			if self.tcpip_api != None:	#client call
+				pass
+			else:
+				delete_record = {}
+				delete_record['cmd'] = 'delete'
+				delete_record['record_no'] = self.search_result['record_no']
+				self.server2gui_queue.put(delete_record)
+				
 			#disable the modify button
 			self.search_modify_bnt['state'] = 'disabled'
 			#clean the dipaly
@@ -529,8 +529,10 @@ class ChildPanelSearch(Toplevel):
 		modifed_records['expense_s'] = self.expense_relate_var.get()
 		modifed_records['comment'] = self.comment_var.get()
 		
-		self.sql_api.sql_update_one_record(self.search_result['record_no'], modifed_records)
-	
+		modifed_records['cmd'] = 'update'
+		modifed_records['old_no'] = self.search_result['record_no']	
+		self.server2gui_queue.put(modifed_records)
+			
 	#save/modify action for client
 	def save_modify_client(self):
 		pass
