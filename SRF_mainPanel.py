@@ -44,10 +44,11 @@ class MainPanelServer(Toplevel):
 		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
 		#queue
 		self.gui2server_queue = queue.Queue()
+		self.server2gui_queue = queue.Queue()
 		#gui init
 		self.server_gui_init()
 		#server logic task init
-		self.server_task = ServerLogic(self.gui2server_queue)
+		self.server_task = ServerLogic(self.gui2server_queue, self.server2gui_queue)
 		self.server_task.start()
 		#message loop, process the message comes from server task
 		self.process_message()
@@ -150,7 +151,12 @@ class MainPanelServer(Toplevel):
 		
 	def process_message(self):
 		self.after(100, self.process_message)
-		print('1')
+		
+		while not self.server2gui_queue.empty():
+			queue_item = self.server2gui_queue.get()
+			if queue_item['cmd'] == 'insert' and queue_item['res'] == 'ok':
+				tkinter.messagebox.showinfo('Tips', '创建订单成功！')
+				
 		
 	#create a new record
 	def bnt_create_new_record(self):
@@ -184,8 +190,7 @@ class MainPanelServer(Toplevel):
 		self.one_record['cmd'] = 'insert'
 		self.gui2server_queue.put(self.one_record)
 			
-		tkinter.messagebox.showinfo('Tips', '创建订单成功！')
-		
+				
 	#search a history record_no
 	def bnt_search_record(self):
 		record_number = self.record_no_search_var.get()

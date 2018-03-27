@@ -10,12 +10,13 @@ from SRF_sqlite import *
 from SRF_tcpip import *
 
 class ServerLogic(threading.Thread):
-	def __init__(self, gui_queue):
+	def __init__(self, gui_queue, server2gui_queue):
 		threading.Thread.__init__(self, daemon = True)
 		self.task_exit = False
 		self.task_event = threading.Event()
 		#for communication to main panel
 		self.gui_queue = gui_queue
+		self.server2gui_queue = server2gui_queue
 		self.gui_oper_res = False
 		#sqlite init
 		self.sqlite_records = FinancialDataRecord()
@@ -37,16 +38,13 @@ class ServerLogic(threading.Thread):
 				if queue_message['cmd'] == 'insert':	
 					queue_message.pop('cmd')
 					self.sqlite_records.sql_insert_one_record(queue_message)
-					self.gui_oper_res = True
+					self.server2gui_queue.put({'cmd':'insert', 'res':'ok'})
 				elif queue_message['cmd'] == 'query':
 					queue_message.pop('cmd')
 					pass
 				elif queue_message['cmd'] == 'update':
 					queue_message.pop('cmd')	
 					pass
-					
-	def gui_oper_res_get(self):
-		return self.gui_oper_res
 		
 	def server_task_exit(self):
 		self.task_exit = True
