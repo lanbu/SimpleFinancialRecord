@@ -13,13 +13,16 @@ from SRF_sqlite import *
 
 ############################################# tcpip server ####################################################
 class TCPIP_server(threading.Thread):
-	def __init__(self, ip_addr = None, ip_port = None, ip_max_num = None):
+	def __init__(self, ip_addr = None, ip_port = None, ip_max_num = None, from_server_queue = None, to_server_queue = None):
 		threading.Thread.__init__(self, daemon = True)
 		#bind
 		self.is_loop_ok	= True
 		self.s_ip_addr = ip_addr
 		self.s_ip_port = ip_port
 		self.s_max_num = ip_max_num
+		self.from_server_queue = from_server_queue
+		self.to_server_queue = to_server_queue
+		
 	#server loop
 	def run(self):
 		#init server
@@ -30,7 +33,7 @@ class TCPIP_server(threading.Thread):
 		#loop
 		while self.is_loop_ok:
 			s_client, addr_client = self.s_server.accept()
-			new_conn_thread = Server_connect_client(s_client, addr_client)
+			new_conn_thread = Server_connect_client(s_client, addr_client, self.from_server_queue, self.to_server_queue)
 			new_conn_thread.start()
 		self.s_server.close()
 		
@@ -40,14 +43,19 @@ class TCPIP_server(threading.Thread):
 
 		
 class Server_connect_client(threading.Thread):
-	def __init__(self, sock_client = None, addr_client = None):
+	def __init__(self, sock_client = None, addr_client = None, from_server_queue = None, to_server_queue = None):
 		threading.Thread.__init__(self, daemon = True)
 		self.sock = sock_client
 		self.addr = addr_client
+		self.from_server_queue = from_server_queue
+		self.to_server_queue = to_server_queue
 		self.is_disconnected = True
 		self.pack_data = None
 		
 	def run(self):		
+		#get threading id
+		self.thread_id = threading.get_ident()
+		
 		while self.is_disconnected:
 			try:
 				data = self.sock.recv(1024)
@@ -62,18 +70,16 @@ class Server_connect_client(threading.Thread):
 	def data_pack_process(self, recv_data):
 		data_extract = TcpipProtocol()
 		pack_type, res_info = data_extract.pack_decode(recv_data)
-		print(res_info)
 		if res_info != False:
 			info_literal = UserRecordInfoLiteral()
 			if pack_type == data_extract.packType_query:
 				#query
-				print(res_info[info_literal.record_num_liter])
-				#res_query = self.grandfather.sqlite_data_query('123')
-				#print(res_query)
-				#encode and send the query result to client
-				#encoded_data = data_extract.pack_encode(res_query)
-				#self.sock(encode_data)
-				#print(encode_data)
+				query_queue = {}
+				query_queue['cmd'] = 'query'
+				query_queue['thread_id'] = self.thread_id
+				query_queue['name'] = res_info[info_literal.usr_name_liter]
+				query_queue['record_no'] = res_info[info_literal.record_num_liter]				
+				self.to_server_queue.put(query_queue)				
 			elif pack_type == data_extract.packType_store:
 				print('store')
 			else:

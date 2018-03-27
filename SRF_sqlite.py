@@ -42,8 +42,12 @@ class FinancialDataRecord():
 							(record_info['name'], record_info['date'], record_info['record_no'], float(record_info['income']), record_info['income_s'], float(record_info['expense']), record_info['expense_s'], record_info['comment'],))
 	
 	#query one record
-	def sql_query_one_record(self, record_number):
-		self.cursor.execute("SELECT * FROM UserFinanRecords WHERE recordNum = ?", (record_number,))
+	def sql_query_one_record(self, record_number, name = None):
+		if name == None:
+			self.cursor.execute("SELECT * FROM UserFinanRecords WHERE recordNum = ?", (record_number,))
+		else:
+			self.cursor.execute("SELECT * FROM UserFinanRecords WHERE recordNum = ? AND usr_name = ?", (record_number, name, ))
+		
 		res = self.cursor.fetchall()
 		
 		if len(res):

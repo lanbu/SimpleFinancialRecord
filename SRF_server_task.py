@@ -8,6 +8,7 @@ __author__ = 'Lanbu'
 import time, threading
 from SRF_sqlite import *
 from SRF_tcpip import *
+import queue
 
 class ServerLogic(threading.Thread):
 	def __init__(self, gui_queue, server2gui_queue):
@@ -18,10 +19,13 @@ class ServerLogic(threading.Thread):
 		self.gui_queue = gui_queue
 		self.server2gui_queue = server2gui_queue
 		self.gui_oper_res = False
+		#for communication to tcpip task
+		self.to_sock_queue = queue.Queue()
+		self.from_sock_queue = queue.Queue()
 		#sqlite init
 		self.sqlite_records = FinancialDataRecord()
 		#tcpip init
-		self.tcpip_server = TCPIP_server(ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100)
+		self.tcpip_server = TCPIP_server(ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100, from_server_queue = self.to_sock_queue, to_server_queue = self.from_sock_queue)
 		self.tcpip_server.start()
 		
 	def run(self):
@@ -54,7 +58,25 @@ class ServerLogic(threading.Thread):
 					queue_message.pop('old_no')
 					self.sqlite_records.sql_update_one_record(old_no, queue_message)
 				elif queue_message['cmd'] == 'delete':
-					self.sqlite_records.delete_one_record(queue_message['record_no'])		
+					self.sqlite_records.delete_one_record(queue_message['record_no'])
+			#message from tcpip socket
+			if not self.from_sock_queue.empty():
+				queue_message = self.from_sock_queue.get()
+				
+				#resolve the message
+				if queue_message['cmd'] == 'query':
+					query_res = self.sqlite_records.sql_query_one_record(queue_message['record_no'], queue_message['name'])
+					
+					query_queue = {}
+					query_queue['cmd'] = 'query'
+					query_queue['thread_id'] = queue_message['thread_id']
+					if query_res == False:
+						query_queue['res'] = 'none'
+					else:
+						query_queue['res'] = 'ok'
+						
+					query_queue['record'] = query_res
+					self.to_sock_queue(query_queue)
 	def server_task_exit(self):
 		self.task_exit = True
 		self.tcpip_server.server_close()
