@@ -30,7 +30,7 @@ class Login(Tk):
 		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
 		self.login_init()
 		self.login_default_info()
-			
+					
 	def login_init(self):
 		#welcome image
 		self.canvas = Canvas(self, height = 200, width = 500)

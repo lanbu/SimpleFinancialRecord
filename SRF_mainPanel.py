@@ -15,6 +15,7 @@ import SFR_login
 import time
 from SRF_server_task import *
 import queue
+import time
 
 
 class MainPanel():
@@ -48,7 +49,9 @@ class MainPanelServer(Toplevel):
 		#server logic task init
 		self.server_task = ServerLogic(self.gui2server_queue)
 		self.server_task.start()
-		
+		#message loop, process the message comes from server task
+		self.process_message()
+			
 	def destroy(self):
 		is_quit = tkinter.messagebox.askyesno(message = '确认退出？', icon = 'question', title = 'quit')
 		if is_quit == True:
@@ -144,7 +147,11 @@ class MainPanelServer(Toplevel):
 		self.gross_profit.grid(column = 1, row = gui_row, sticky = W)
 		self.gross_update_bnt.grid(column = 2, row = gui_row, sticky = E)
 		self.reg_user_manage_bnt.grid(column = 7, row = gui_row, sticky = E)
-	
+		
+	def process_message(self):
+		self.after(100, self.process_message)
+		print('1')
+		
 	#create a new record
 	def bnt_create_new_record(self):
 		self.one_record = {}
@@ -174,7 +181,9 @@ class MainPanelServer(Toplevel):
 		#need acquire thread lock	
 		#self.sqlite_records.sql_insert_one_record(self.one_record)
 		#need release thread lock
-		
+		self.one_record['cmd'] = 'insert'
+		self.gui2server_queue.put(self.one_record)
+			
 		tkinter.messagebox.showinfo('Tips', '创建订单成功！')
 		
 	#search a history record_no
@@ -186,6 +195,10 @@ class MainPanelServer(Toplevel):
 			#need acquire thread lock
 			#search_res = self.sqlite_records.sql_query_one_record(record_number)
 			#need release thread lock
+			query_no = {}
+			query_no['record_no'] = record_number
+			query_no['cmd'] = 'query'
+			self.gui2server_queue.put(query_no)
 		
 			if search_res == False:
 				tkinter.messagebox.showinfo('Search Result', '无订单记录')

@@ -20,7 +20,7 @@ class FinancialDataRecord():
 		self.record_expense_s = None
 		self.record_remark = None
 		#create a connection
-		self.conn = sqlite3.connect('SRF_RecordsDB.db')
+		self.conn = sqlite3.connect('SRF_RecordsDB.db', check_same_thread = False)
 		self.cursor = self.conn.cursor()
 		self.sql_create_record_table()
 		
