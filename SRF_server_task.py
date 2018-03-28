@@ -20,12 +20,12 @@ class ServerLogic(threading.Thread):
 		self.server2gui_queue = server2gui_queue
 		self.gui_oper_res = False
 		#for communication to tcpip task
-		self.to_sock_queue = queue.Queue()
+		self.to_sock_queues = {}
 		self.from_sock_queue = queue.Queue()
 		#sqlite init
 		self.sqlite_records = FinancialDataRecord()
 		#tcpip init
-		self.tcpip_server = TCPIP_server(ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100, from_server_queue = self.to_sock_queue, to_server_queue = self.from_sock_queue)
+		self.tcpip_server = TCPIP_server(ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100, from_server_queues = self.to_sock_queues, to_server_queue = self.from_sock_queue)
 		self.tcpip_server.start()
 		
 	def run(self):
@@ -69,14 +69,13 @@ class ServerLogic(threading.Thread):
 					
 					query_queue = {}
 					query_queue['cmd'] = 'query'
-					query_queue['thread_id'] = queue_message['thread_id']
 					if query_res == False:
 						query_queue['res'] = 'none'
 					else:
 						query_queue['res'] = 'ok'
 						
 					query_queue['record'] = query_res
-					self.to_sock_queue(query_queue)
+					self.to_sock_queues[queue_message['thread_id']].put(query_queue)
 	def server_task_exit(self):
 		self.task_exit = True
 		self.tcpip_server.server_close()

@@ -5,6 +5,7 @@
 
 __author__ = 'Lanbu'
 
+import json
 
 #literal for user's record information
 class UserRecordInfoLiteral():
@@ -21,115 +22,70 @@ class UserRecordInfoLiteral():
 class TcpipProtocol():
 	def __init__(self):
 		#server to client
-		self.packHead_server2client = b'server2client'
-		self.packType_query_ack = 0
-		self.packType_store_ack = 1
+		self.packHead_server2client = 'server2client'
+		self.packType_query_ack = 'query_ack'
+		self.packType_store_ack = 'store_ack'
 		
 		#client to server
-		self.packHead_client2server = b'client2server'		
-		self.packType_query = 0
-		self.packType_store = 1
-		
-		#common
-		self.packHead_len = len(self.packHead_client2server)
-		self.packType_pos = self.packHead_len
-		self.packData_start_pos = self.packType_pos + 1
+		self.packHead_client2server = 'client2server'		
+		self.packType_query = 'query'
+		self.packType_store = 'store'
 		
 	#pack decode
 	def pack_decode(self, data_stream):
-		decoded_pack = {}
-		inf_literal = UserRecordInfoLiteral()
+		usr_info_literal = UserRecordInfoLiteral()
+		decoded_pack = self.decode_bytes_dict(data_stream)
 		
-		if len(data_stream) > (self.packHead_len + 2):
-			#packet head
-			pack_head_b = data_stream[0:self.packHead_len]
-			if pack_head_b == self.packHead_client2server:	#pack head check
-				#packet length
-				pack_data_len = 0
-				pack_data_len = data_stream[self.packHead_len]
-				pack_data_len <<= 8
-				pack_data_len += data_stream[self.packHead_len + 1]
-
-				if pack_data_len > 0:		
-					#packet type	
-					pack_data_start = self.packHead_len + 2
-					pack_type = data_stream[pack_data_start]
-					if pack_type == self.packType_query:		#pack type check -- ask for query
-						#name
-						pack_name_pos_start = pack_data_start + 2
-						pack_name_pos_end = pack_name_pos_start + data_stream[pack_data_start + 1]
-						pack_name = data_stream[pack_name_pos_start : pack_name_pos_end].decode()
-						decoded_pack[inf_literal.usr_name_liter] = pack_name
-						#record number
-						pack_record_pos_start = pack_name_pos_end + 1
-						pack_record_pos_end = data_stream[pack_name_pos_end] + pack_record_pos_start
-						pack_recordno = data_stream[pack_record_pos_start : pack_record_pos_end].decode()
-						decoded_pack[inf_literal.record_num_liter] = pack_recordno
-						
-						decode_pack_type = self.packType_query
-					elif pack_type == self.packType_store:	#pack type check -- ask for store
-						#name
-						pack_name_pos_start = pack_data_start + 2
-						pack_name_pos_end = pack_name_pos_start + data_stream[pack_data_start + 1]
-						pack_name = data_stream[pack_name_pos_start : pack_name_pos_end].decode()
-						decoded_pack[inf_literal.usr_name_liter] = pack_name
-						#date
-						pack_date_pos_start = pack_name_pos_end + 1
-						pack_date_pos_end = pack_date_pos_start + data_stream[pack_name_pos_end]
-						pack_date = data_stream[pack_date_pos_start : pack_date_pos_end].decode()
-						decoded_pack[inf_literal.record_date_liter] = pack_date
-						#record number
-						pack_record_pos_start = pack_date_pos_end + 1
-						pack_record_pos_end = data_stream[pack_date_pos_end] + pack_record_pos_start
-						pack_recordno = data_stream[pack_record_pos_start : pack_record_pos_end].decode()
-						decoded_pack[inf_literal.record_num_liter] = pack_recordno
-						#income
-						pack_income_pos_start = pack_record_pos_end + 1
-						pack_income_pos_end = data_stream[pack_record_pos_end] + pack_income_pos_start
-						pack_income = data_stream[pack_income_pos_start : pack_income_pos_end].decode()
-						decoded_pack[inf_literal.record_income_liter] = pack_income
-						#income related
-						pack_income_s_pos_start = pack_income_pos_end + 1
-						pack_income_s_pos_end = data_stream[pack_income_pos_end] + pack_income_s_pos_start
-						pack_income_s = data_stream[pack_income_s_pos_start : pack_income_s_pos_end].decode()
-						decoded_pack[inf_literal.record_income_s_liter] = pack_income_s
-						#expense
-						pack_expense_pos_start = pack_income_s_pos_end + 1
-						pack_expense_pos_end = data_stream[pack_income_s_pos_end] + pack_expense_pos_start
-						pack_expense = data_stream[pack_expense_pos_start : pack_expense_pos_end].decode()
-						decoded_pack[inf_literal.record_expense_liter] = pack_expense
-						#expense related
-						pack_expense_s_pos_start = pack_expense_pos_end + 1
-						pack_expense_s_pos_end = data_stream[pack_expense_pos_end] + pack_expense_s_pos_start
-						pack_expense_s = data_stream[pack_expense_s_pos_start : pack_expense_s_pos_end].decode()
-						decoded_pack[inf_literal.record_expense_s_liter] = pack_expense_s
-						#comment
-						pack_comment_pos_start = pack_expense_s_pos_end + 1
-						pack_comment_pos_end = data_stream[pack_expense_s_pos_end] + pack_comment_pos_start
-						pack_comment = data_stream[pack_comment_pos_start : pack_comment_pos_end].decode()
-						decoded_pack[inf_literal.record_remark_liter] = pack_comment
-						
-						decode_pack_type = self.packType_store
-					else:
-						decoded_pack = False						
-				else:
-					decoded_pack = False
-			else:
-				decoded_pack = False
+		pack_head = decoded_pack.get('head')
+		pack_type = decoded_pack.get('pack_type')
+		if pack_head != None and pack_type != None:
+			if pack_head == self.packHead_client2server:
+				if pack_type == self.packType_query:
+					usr_name = decoded_pack.get(usr_info_literal.usr_name_liter)
+					usr_record_no = decoded_pack.get(usr_info_literal.record_num_liter)
+					if usr_name == None or usr_record_no == None:
+						decoded_pack = None
+				elif pack_type == self.packType_store:
+					pass
 		else:
-			decoded_pack = False
-		
-		#return decoded packet
-		return decode_pack_type, decoded_pack
+			decoded_pack = None
+
+			#return decoded packet
+		return decoded_pack
 		
 	#pack encode
 	def pack_encode(self, pack_data):
+		inf_literal = UserRecordInfoLiteral()
 		encoded_data = self.packHead_server2client.encode()
+		
 		if pack_data != False:
-			pass
+			
+			#name
+			pack_data[inf_literal.usr_name_liter]
 		else:
 			pass 
 			
 		return encoded_data	
 			
+
+	#encode: dictionary --> bytes
+	def encode_dict_bytes(self, dat_dict):
+		#dict --> json
+		dat_json = json.JSONEncoder().encode(dat_dict)
+		#json --> string
+		dat_str = json.dumps(dat_json)
+		#string --> bytes
+		dat_bytes = dat_str.encode()
+	
+		return dat_bytes
 			
+	#decode: bytes --> dictionary
+	def decode_bytes_dict(self, dat_bytes):
+		#bytes --> string
+		dat_str = dat_bytes.decode()
+		#string --> json
+		dat_json = json.loads(dat_str)
+		#json --> dictionary
+		dat_dict = json.JSONDecoder().decode(dat_json)
+
+		return dat_dict
