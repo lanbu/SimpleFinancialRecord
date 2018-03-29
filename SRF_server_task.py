@@ -46,6 +46,7 @@ class ServerLogic(threading.Thread):
 				elif queue_message['cmd'] == 'query':
 					queue_message.pop('cmd')
 					query_res = self.sqlite_records.sql_query_one_record(queue_message['record_no'])
+					
 					if query_res == False:
 						query_res = {'cmd':'query', 'res':'error'}
 					else:
@@ -73,9 +74,28 @@ class ServerLogic(threading.Thread):
 						query_queue['res'] = 'none'
 					else:
 						query_queue['res'] = 'ok'
-						
+					
 					query_queue['record'] = query_res
 					self.to_sock_queues[queue_message['thread_id']].put(query_queue)
+				elif queue_message['cmd'] == 'store':
+					self.sqlite_records.sql_insert_one_record(queue_message['record'])
+					store_queue = {}
+					store_queue['cmd'] = 'store'
+					store_queue['res'] = 'ok'
+					self.to_sock_queues[queue_message['thread_id']].put(store_queue)
+				elif queue_message['cmd'] == 'update':
+					self.sqlite_records.sql_update_one_record(queue_message['record_no_old'], queue_message['record'])
+					update_queue = {}
+					update_queue['cmd'] = 'update'
+					update_queue['res'] = 'ok'
+					self.to_sock_queues[queue_message['thread_id']].put(update_queue)
+				elif queue_message['cmd'] == 'delete':
+					self.sqlite_records.delete_one_record(queue_message['record_no'])
+					
+					del_queue = {}
+					del_queue['cmd'] = 'delete'
+					del_queue['res'] = 'ok'
+					self.to_sock_queues[queue_message['thread_id']].put(del_queue)
 	def server_task_exit(self):
 		self.task_exit = True
 		self.tcpip_server.server_close()

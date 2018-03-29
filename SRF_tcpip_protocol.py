@@ -18,6 +18,7 @@ class UserRecordInfoLiteral():
 		self.record_expense_liter = 'expense'
 		self.record_expense_s_liter = 'expense_s'
 		self.record_remark_liter = 'comment'
+		self.record_num_old_liter = 'record_no_old'
 
 class TcpipProtocol():
 	def __init__(self):
@@ -25,11 +26,15 @@ class TcpipProtocol():
 		self.packHead_server2client = 'server2client'
 		self.packType_query_ack = 'query_ack'
 		self.packType_store_ack = 'store_ack'
+		self.packType_update_ack = 'update_ack'
+		self.packType_del_ack = 'delete_ack'
 		
 		#client to server
 		self.packHead_client2server = 'client2server'		
 		self.packType_query = 'query'
 		self.packType_store = 'store'
+		self.packType_update = 'update'
+		self.packType_delete = 'delete'
 		
 	#pack decode
 	def pack_decode(self, data_stream):
@@ -40,13 +45,28 @@ class TcpipProtocol():
 		pack_type = decoded_pack.get('pack_type')
 		if pack_head != None and pack_type != None:
 			if pack_head == self.packHead_client2server:
-				if pack_type == self.packType_query:
+				if pack_type == self.packType_query or pack_type == self.packType_delete:
 					usr_name = decoded_pack.get(usr_info_literal.usr_name_liter)
 					usr_record_no = decoded_pack.get(usr_info_literal.record_num_liter)
 					if usr_name == None or usr_record_no == None:
 						decoded_pack = None
-				elif pack_type == self.packType_store:
-					pass
+				elif pack_type == self.packType_store or pack_type == self.packType_update:
+					usr_name = decoded_pack.get(usr_info_literal.usr_name_liter)
+					usr_record_no = decoded_pack.get(usr_info_literal.record_num_liter)
+					usr_date = decoded_pack.get(usr_info_literal.record_date_liter)
+					usr_income = decoded_pack.get(usr_info_literal.record_income_liter)
+					usr_income_s = decoded_pack.get(usr_info_literal.record_income_s_liter)
+					usr_expense = decoded_pack.get(usr_info_literal.record_expense_liter)
+					usr_expense_s = decoded_pack.get(usr_info_literal.record_expense_s_liter)
+					usr_remark = decoded_pack.get(usr_info_literal.record_remark_liter)
+					if usr_name == None or usr_record_no == None or usr_date or usr_income or usr_income_s \
+						or usr_expense or usr_expense_s or usr_remark:
+						if pack_type == self.packType_update:
+							usr_old_record_no = decoded_pack.get(usr_info_literal.record_num_old_liter)
+							if usr_old_record_no == None:
+								decoded_pack = None
+				else:
+					decoded_pack = None
 		else:
 			decoded_pack = None
 
@@ -55,19 +75,10 @@ class TcpipProtocol():
 		
 	#pack encode
 	def pack_encode(self, pack_data):
-		inf_literal = UserRecordInfoLiteral()
-		encoded_data = self.packHead_server2client.encode()
+		encoded_data = self.encode_dict_bytes(pack_data)	
 		
-		if pack_data != False:
-			
-			#name
-			pack_data[inf_literal.usr_name_liter]
-		else:
-			pass 
-			
 		return encoded_data	
-			
-
+	
 	#encode: dictionary --> bytes
 	def encode_dict_bytes(self, dat_dict):
 		#dict --> json

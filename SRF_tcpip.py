@@ -65,10 +65,8 @@ class Server_connect_client(threading.Thread):
 					#wait for the message from server task
 					while self.from_server_queues[self.thread_id].empty():
 						time.sleep(0.1)
-					print('ok')
 					server_pack = self.from_server_queues[self.thread_id].get()	
-					print(server_pack)
-					#self.server_pack_process(server_pack)
+					self.server_pack_process(server_pack)
 			except:
 				self.sock.close()
 				self.is_disconnected = False
@@ -80,31 +78,68 @@ class Server_connect_client(threading.Thread):
 
 		if res_info != None:
 			info_literal = UserRecordInfoLiteral()
-			if res_info['pack_type'] == data_extract.packType_query:
-				#query
+			if res_info['pack_type'] == data_extract.packType_query or res_info['pack_type'] == data_extract.packType_delete:
 				query_queue = {}
-				query_queue['cmd'] = 'query'
+				
+				if res_info['pack_type'] == data_extract.packType_query:	#query	
+					query_queue['cmd'] = 'query'
+				else:	#delete
+					query_queue['cmd'] = 'delete'
+					
 				query_queue['thread_id'] = self.thread_id
 				query_queue['name'] = res_info[info_literal.usr_name_liter]
 				query_queue['record_no'] = res_info[info_literal.record_num_liter]				
 				self.to_server_queue.put(query_queue)		
-			elif res_info['pack_type'] == data_extract.packType_store:
-				print('store')
+			elif res_info['pack_type'] == data_extract.packType_store or res_info['pack_type'] == data_extract.packType_update:
+				res_info.pop('head')
+				res_info.pop('pack_type')
+				
+				store_queue = {}
+				if res_info['pack_type'] == data_extract.packType_store:	#store
+					store_queue['cmd'] = 'store'
+				else:	#update
+					store_queue['cmd'] = 'update'
+					store_queue['record_no_old'] = res_info['record_no_old']
+					res_info.pop('record_no_old')
+				
+				store_queue['thread_id'] = self.thread_id
+				store_queue['record'] = res_info
+				self.to_server_queue.put(store_queue)
 			else:
 				pass
 		else:
 			print('pack error')
+			
 	def server_pack_process(self, ser_pack):
+		data_extract = TcpipProtocol()
 		if ser_pack['cmd'] == 'query':
-			if ser_pack['res'] != 'none':
-				ser_pack.pop('cmd')
-				ser_pack_encode = pack_encode(ser_pack)
-		elif ser_pack['cmd'] == 'insert':
-			pass
+			ser_pack.pop('cmd')
+			ser_pack['pack_type'] = data_extract.packType_query_ack
+			ser_pack['head'] = data_extract.packHead_server2client
+			ser_pack_encode = data_extract.pack_encode(ser_pack)
+			#sock send data
+			self.sock.send(ser_pack_encode)
+		elif ser_pack['cmd'] == 'store':
+			ser_pack.pop('cmd')
+			ser_pack['pack_type'] = ata_extract.packType_store_ack
+			ser_pack['head'] = data_extract.packHead_server2client
+			ser_pack_encode = data_extract.pack_encode(ser_pack)
+			#sock send data
+			self.sock.send(ser_pack_encode)
 		elif ser_pack['cmd'] == 'update':
-			pass
+			ser_pack.pop('cmd')
+			ser_pack['pack_type'] = ata_extract.packType_update_ack
+			ser_pack['head'] = data_extract.packHead_server2client
+			ser_pack_encode = data_extract.pack_encode(ser_pack)
+			#sock send data
+			self.sock.send(ser_pack_encode)
 		elif ser_pack['cmd'] == 'delete':
-			pass
+			ser_pack.pop('cmd')
+			ser_pack['pack_type'] = ata_extract.packType_del_ack
+			ser_pack['head'] = data_extract.packHead_server2client
+			ser_pack_encode = data_extract.pack_encode(ser_pack)
+			#sock send data
+			self.sock.send(ser_pack_encode)
 ############################################### tcpip client ################################################		
 class TCPIP_client():
 	def __init__(self, ip_addr, ip_port):
