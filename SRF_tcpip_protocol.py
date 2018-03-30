@@ -28,6 +28,7 @@ class TcpipProtocol():
 		self.packType_store_ack = 'store_ack'
 		self.packType_update_ack = 'update_ack'
 		self.packType_del_ack = 'delete_ack'
+		self.packType_error_ack = 'error_ack'
 		
 		#client to server
 		self.packHead_client2server = 'client2server'		
@@ -35,7 +36,7 @@ class TcpipProtocol():
 		self.packType_store = 'store'
 		self.packType_update = 'update'
 		self.packType_delete = 'delete'
-		
+				
 	#pack decode
 	def pack_decode(self, data_stream):
 		usr_info_literal = UserRecordInfoLiteral()

@@ -90,7 +90,7 @@ class ServerLogic(threading.Thread):
 					update_queue['res'] = 'ok'
 					self.to_sock_queues[queue_message['thread_id']].put(update_queue)
 				elif queue_message['cmd'] == 'delete':
-					self.sqlite_records.delete_one_record(queue_message['record_no'])
+					self.sqlite_records.delete_one_record(queue_message['record_no'], queue_message['name'])
 					
 					del_queue = {}
 					del_queue['cmd'] = 'delete'

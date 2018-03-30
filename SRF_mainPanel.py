@@ -16,6 +16,7 @@ import time
 from SRF_server_task import *
 import queue
 import time
+import re
 
 
 class MainPanel():
@@ -222,15 +223,20 @@ class MainPanelClient(Toplevel):
 		master.withdraw()
 		#gui init
 		self.user_name = user_name
-		win_width = 860
+		win_width = 890
 		win_height = 215
 		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
 		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2
 		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
 		self.client_gui_init()
+		#ip connecting parameters
+		self.ip_addr = '0.0.0.0'
+		self.ip_port = 9999
+		#message queue for communication between panel and client socket
+		self.to_sock_queue = queue.Queue()
+		self.from_sock_queue = queue.Queue()
 		#tcpip init for record store or search
-		
-		
+		self.tcpip_api = None		
 	#destroy the window
 	def destroy(self):
 		is_quit = tkinter.messagebox.askyesno(message = '确认退出？', icon = 'question', title = 'quit')
@@ -280,6 +286,8 @@ class MainPanelClient(Toplevel):
 		self.date_search_var = StringVar()
 		self.date_search = ttk.Entry(self.gui_frame, textvariable = self.date_search_var)
 		self.search_bnt = ttk.Button(self.gui_frame, text = '查询', command = self.bnt_search_record)
+		self.server_connect_bnt = ttk.Button(self.gui_frame, text = '连接', command = self.bnt_connect)
+		self.server_conn_config_bnt = ttk.Button(self.gui_frame, text = '配置', command = self.bnt_config)
 		
 		#grid widgets
 		self.gui_frame.grid(column = 0, row = 0, padx = 10)
@@ -316,6 +324,8 @@ class MainPanelClient(Toplevel):
 		self.date_search_lbl.grid(column = 2, row = gui_row, sticky = E)
 		self.date_search.grid(column = 3, row = gui_row, sticky = W)
 		self.search_bnt.grid(column = 4, row = gui_row, sticky = E)
+		self.server_connect_bnt.grid(column = 6, row = gui_row, sticky = W)
+		self.server_conn_config_bnt.grid(column = 7, row = gui_row, sticky = W)
 	
 	#create a new record
 	def bnt_create_new_record(self):
@@ -362,6 +372,25 @@ class MainPanelClient(Toplevel):
 					self.search_win = ChildPanelSearch(self, search_res)
 				else:
 					tkinter.messagebox.showinfo('Warning', '无权查看该订单！请联系管理员')
+					
+	#connect with server by socket
+	def bnt_connect(self):
+		self.server_connect_bnt['state'] = 'disabled'
+		self.tcpip_api = TCPIP_client(self.ip_addr, self.ip_port)
+		conn_res = self.tcpip_api.client_connect()
+		
+		if conn_res:
+			self.server_connect_bnt['text'] = '连接中..'
+		else:
+			tkinter.messagebox.showinfo('Warning', '连接失败！')
+	#save the ip configure
+	def save_ip_configure(self, ip_addr):
+		self.ip_addr = ip_addr
+		
+	#configure the connecting parameters
+	def bnt_config(self):
+		ip_config_win = IPConfigurePanel(self)
+		
 ############################################## panel for search result #################################
 #search panel
 class ChildPanelSearch(Toplevel):
@@ -536,6 +565,58 @@ class ChildPanelSearch(Toplevel):
 	#save/modify action for client
 	def save_modify_client(self):
 		pass
+		
+############################################## panel for ip configure ###############################
+class IPConfigurePanel(Toplevel):
+	#init
+	def __init__(self, master = None):
+		Toplevel.__init__(self, master)
+		win_width = 215
+		win_height = 90
+		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
+		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2
+		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
+		#mange gui init
+		self.manage_win_init()
+		
+	def manage_win_init(self):
+		self.title('ip设置')
+		self.gui_frame = ttk.Frame(self)
+		
+		#row 0
+		self.ip_addr_lbl = ttk.Label(self.gui_frame, text = 'ip地址：')
+		self.ip_addr_var = StringVar()
+		self.ip_addr_entry = ttk.Entry(self.gui_frame, textvariable = self.ip_addr_var)
+		#row 1
+		self.ip_eg_lbl = ttk.Label(self.gui_frame, text = '示例:192.168.1.1')
+		#row 2
+		self.ip_sure = ttk.Button(self.gui_frame, text = '确认', command = self.bnt_ip_sure)
+		self.ip_cancle = ttk.Button(self.gui_frame, text = '取消', command = self.bnt_ip_cancle)
+		
+		#grid
+		self.gui_frame.grid(column = 0, row = 0, padx = 10)
+		#row 0 
+		self.ip_addr_lbl.grid(column = 0, row = 0, sticky = W, pady = 5)
+		self.ip_addr_entry.grid(column = 1, row = 0, sticky = E)
+		#row 1
+		self.ip_eg_lbl.grid(column = 1, row = 1, sticky = W)
+		#row 2
+		self.ip_sure.grid(column = 0, row = 2)
+		self.ip_cancle.grid(column = 1, row = 2)
+		
+	def bnt_ip_sure(self):
+		ip_addr = self.ip_addr_var.get()
+		
+		match_res = re.match(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', ip_addr)
+		if match_res != None:	
+			self.master.save_ip_configure(ip_addr)
+			self.destroy()
+		else:
+			tkinter.messagebox.showinfo('警告', 'ip地址格式错误')
+		
+	def bnt_ip_cancle(self):
+		self.destroy()
+		
 ############################################## panel for user manage#################################	
 class UserPanelManage(Toplevel):
 	#init

@@ -61,12 +61,15 @@ class Server_connect_client(threading.Thread):
 				data = self.sock.recv(1024)
 				if len(data) != 0:
 					#process the data
-					self.client_pack_process(data)
-					#wait for the message from server task
-					while self.from_server_queues[self.thread_id].empty():
-						time.sleep(0.1)
-					server_pack = self.from_server_queues[self.thread_id].get()	
-					self.server_pack_process(server_pack)
+					proce_res = self.client_pack_process(data)
+					if proce_res:
+						#wait for the message from server task
+						while self.from_server_queues[self.thread_id].empty():
+							time.sleep(0.1)
+						server_pack = self.from_server_queues[self.thread_id].get()	
+						self.server_pack_process(server_pack)
+					else:
+						self.send_error_ack()
 			except:
 				self.sock.close()
 				self.is_disconnected = False
@@ -88,12 +91,9 @@ class Server_connect_client(threading.Thread):
 					
 				query_queue['thread_id'] = self.thread_id
 				query_queue['name'] = res_info[info_literal.usr_name_liter]
-				query_queue['record_no'] = res_info[info_literal.record_num_liter]				
+				query_queue['record_no'] = res_info[info_literal.record_num_liter]	
 				self.to_server_queue.put(query_queue)		
 			elif res_info['pack_type'] == data_extract.packType_store or res_info['pack_type'] == data_extract.packType_update:
-				res_info.pop('head')
-				res_info.pop('pack_type')
-				
 				store_queue = {}
 				if res_info['pack_type'] == data_extract.packType_store:	#store
 					store_queue['cmd'] = 'store'
@@ -102,13 +102,18 @@ class Server_connect_client(threading.Thread):
 					store_queue['record_no_old'] = res_info['record_no_old']
 					res_info.pop('record_no_old')
 				
+				res_info.pop('head')
+				res_info.pop('pack_type')
+				
 				store_queue['thread_id'] = self.thread_id
 				store_queue['record'] = res_info
 				self.to_server_queue.put(store_queue)
 			else:
 				pass
+				
+			return True
 		else:
-			print('pack error')
+			return False
 			
 	def server_pack_process(self, ser_pack):
 		data_extract = TcpipProtocol()
@@ -121,42 +126,56 @@ class Server_connect_client(threading.Thread):
 			self.sock.send(ser_pack_encode)
 		elif ser_pack['cmd'] == 'store':
 			ser_pack.pop('cmd')
-			ser_pack['pack_type'] = ata_extract.packType_store_ack
+			ser_pack['pack_type'] = data_extract.packType_store_ack
 			ser_pack['head'] = data_extract.packHead_server2client
 			ser_pack_encode = data_extract.pack_encode(ser_pack)
 			#sock send data
 			self.sock.send(ser_pack_encode)
 		elif ser_pack['cmd'] == 'update':
 			ser_pack.pop('cmd')
-			ser_pack['pack_type'] = ata_extract.packType_update_ack
+			ser_pack['pack_type'] = data_extract.packType_update_ack
 			ser_pack['head'] = data_extract.packHead_server2client
 			ser_pack_encode = data_extract.pack_encode(ser_pack)
 			#sock send data
 			self.sock.send(ser_pack_encode)
 		elif ser_pack['cmd'] == 'delete':
 			ser_pack.pop('cmd')
-			ser_pack['pack_type'] = ata_extract.packType_del_ack
+			ser_pack['pack_type'] = data_extract.packType_del_ack
 			ser_pack['head'] = data_extract.packHead_server2client
 			ser_pack_encode = data_extract.pack_encode(ser_pack)
 			#sock send data
 			self.sock.send(ser_pack_encode)
+			
+	def send_error_ack(self):
+		data_code = TcpipProtocol()
+		error_ack = {}
+		error_ack['head'] = data_code.packHead_server2client
+		error_ack['pack_type'] = data_code.packType_error_ack
+		
+		error_ack_b = data_code.pack_encode(error_ack)
+		#sock send data
+		self.sock.send(error_ack_b)
+		
 ############################################### tcpip client ################################################		
-class TCPIP_client():
-	def __init__(self, ip_addr, ip_port):
+class TCPIP_client(threading.Thread):
+	def __init__(self, ip_addr, ip_port, from_server_queue = None, to_server_queue = None):
+		threading.Thread.__init__(self, daemon = True)
 		self.client_addr = (ip_addr, ip_port)
-		c_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.c_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		
 	def client_connect(self):
 		try:
-			c_sock.connect(self.client_addr)
+			self.c_sock.connect(self.client_addr)
+			return True
 		except:
 			#connect failed
+			return False
 			pass
 		finally:
-			c_sock.close()
+			self.c_sock.close()
 	def client_send(self, send_data):
 		try:
-			c_sock.send(send_data)
+			self.c_sock.send(send_data)
 		except:
 			pass
 			#send failed
