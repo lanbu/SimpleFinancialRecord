@@ -10,6 +10,7 @@ import time, threading
 from SRF_tcpip_protocol import *
 from SRF_sqlite import *
 import queue
+import SRF_CommonDefine as commonDefine
 
 ############################################# tcpip server ####################################################
 class TCPIP_server(threading.Thread):
@@ -58,7 +59,7 @@ class Server_connect_client(threading.Thread):
 	def run(self):				
 		while self.is_disconnected:
 			try:
-				data = self.sock.recv(1024)
+				data = self.sock.recv(commonDefine.SOCKET_RECV_LEN)
 				if len(data) != 0:
 					#process the data
 					proce_res = self.client_pack_process(data)
@@ -170,12 +171,19 @@ class TCPIP_client(threading.Thread):
 		except:
 			#connect failed
 			return False
-			pass
-		finally:
-			self.c_sock.close()
+			
 	def client_send(self, send_data):
 		try:
 			self.c_sock.send(send_data)
+			return True
 		except:
-			pass
+			return False
 			#send failed
+	
+	def client_recv(self):
+		try:
+			recv_data = self.c_sock.recv(commonDefine.SOCKET_RECV_LEN)
+		except:
+			recv_data = False
+		
+		return recv_data

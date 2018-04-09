@@ -17,6 +17,8 @@ from SRF_server_task import *
 import queue
 import time
 import re
+from SRF_tcpip_protocol import *
+import SRF_CommonDefine as commonDefine
 
 
 class MainPanel():
@@ -221,6 +223,7 @@ class MainPanelClient(Toplevel):
 		Toplevel.__init__(self, master)
 		self.master = master
 		master.withdraw()
+		self.conn_res = False
 		#gui init
 		self.user_name = user_name
 		win_width = 890
@@ -230,7 +233,7 @@ class MainPanelClient(Toplevel):
 		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
 		self.client_gui_init()
 		#ip connecting parameters
-		self.ip_addr = '0.0.0.0'
+		self.ip_addr = '127.0.0.1'
 		self.ip_port = 9999
 		#message queue for communication between panel and client socket
 		self.to_sock_queue = queue.Queue()
@@ -286,7 +289,9 @@ class MainPanelClient(Toplevel):
 		self.date_search_var = StringVar()
 		self.date_search = ttk.Entry(self.gui_frame, textvariable = self.date_search_var)
 		self.search_bnt = ttk.Button(self.gui_frame, text = '查询', command = self.bnt_search_record)
-		self.server_connect_bnt = ttk.Button(self.gui_frame, text = '连接', command = self.bnt_connect)
+		self.server_connect_bnt_var = StringVar()
+		self.server_connect_bnt_var.set('连接')
+		self.server_connect_bnt = ttk.Button(self.gui_frame, textvariable = self.server_connect_bnt_var, command = self.bnt_connect)
 		self.server_conn_config_bnt = ttk.Button(self.gui_frame, text = '配置', command = self.bnt_config)
 		
 		#grid widgets
@@ -329,60 +334,105 @@ class MainPanelClient(Toplevel):
 	
 	#create a new record
 	def bnt_create_new_record(self):
-		self.one_record = {}
-		self.one_record['name'] = self.user_name
-		self.one_record['record_no'] = self.record_no_var.get()
-		self.one_record['date'] = self.date_var.get()
-		self.one_record['income'] = self.income_var.get()
-		self.one_record['income_s'] = self.income_relate_var.get()
-		self.one_record['expense'] = self.expense_var.get()
-		self.one_record['expense_s'] = self.expense_relate_var.get()
-		self.one_record['comment'] = self.comment_var.get()
-		
-		if self.one_record['record_no'] == '':
-			tkinter.messagebox.showinfo('Warning', '请输入订单编号')
-			return
+		if self.conn_res == False:
+			tkinter.messagebox.showinfo('tips', '请先连接主机！')
+		else:				
+			self.one_record = {}
+			self.one_record['name'] = self.user_name
+			self.one_record['record_no'] = self.record_no_var.get()
+			self.one_record['date'] = self.date_var.get()
+			self.one_record['income'] = self.income_var.get()
+			self.one_record['income_s'] = self.income_relate_var.get()
+			self.one_record['expense'] = self.expense_var.get()
+			self.one_record['expense_s'] = self.expense_relate_var.get()
+			self.one_record['comment'] = self.comment_var.get()
 			
-		if self.one_record['income'] == '' or self.one_record['expense'] == '':
-			is_create = tkinter.messagebox.askyesno('ask', '支出或收入为空，确认保存？')
-			if not is_create:
+			if self.one_record['record_no'] == '':
+				tkinter.messagebox.showinfo('Warning', '请输入订单编号')
 				return
+				
+			if self.one_record['income'] == '' or self.one_record['expense'] == '':
+				is_create = tkinter.messagebox.askyesno('ask', '支出或收入为空，确认保存？')
+				if not is_create:
+					return
+				else:
+					if self.one_record['income'] == '':
+						self.one_record['income'] = 0.0
+					if self.one_record['expense'] == '':
+						self.one_record['expense'] = 0.0
+						
+			#transfer record to master through tcpip
+			self.one_record['head'] = 'client2server'
+			self.one_record['pack_type'] = 'store'
+			tcpip_protocol = TcpipProtocol()
+			record_info_b = tcpip_protocol.encode_dict_bytes(self.one_record)
+			send_res = self.tcpip_api.client_send(record_info_b)
+			if send_res:
+				
+				s_recv = self.tcpip_api.client_recv()
+				if s_recv: 
+					dic_recv = tcpip_protocol.decode_bytes_dict(s_recv)
+					if dic_recv['pack_type'] == 'error_ack':
+						tkinter.messagebox.showinfo('tips', '创建订单失败！')
+					else:					
+						if dic_recv['res'] == 'ok':
+							tkinter.messagebox.showinfo('tips', '创建订单成功！')
+						else:
+							tkinter.messagebox.showinfo('tips', '创建订单失败！')
+				else:
+					tkinter.messagebox.showinfo('tips', '创建订单失败！')
 			else:
-				if self.one_record['income'] == '':
-					self.one_record['income'] = 0.0
-				if self.one_record['expense'] == '':
-					self.one_record['expense'] = 0.0
-					
-		#transfer record to master through tcpip
-		pass
-		
+				tkinter.messagebox.showinfo('tips', '创建订单失败！')
 	#search a history record_no
 	def bnt_search_record(self):
-		record_number = self.record_no_search_var.get()
-		if record_number == '':
-			tkinter.messagebox.showinfo('Search', '搜索订单编号不能为空！')
-		else:			
-			#send the quest for record to master and wait for the record returned
-			search_res = False
-		
-			if search_res == False:
-				tkinter.messagebox.showinfo('Search Result', '无订单记录')
-			else:
-				if search_res['name'] == self.user_name:
-					self.search_win = ChildPanelSearch(self, search_res)
-				else:
-					tkinter.messagebox.showinfo('Warning', '无权查看该订单！请联系管理员')
+		if self.conn_res:
+			record_number = self.record_no_search_var.get()
+			if record_number == '':
+				tkinter.messagebox.showinfo('Search', '搜索订单编号不能为空！')
+			else:			
+				#send the quest for record to master and wait for the record returned
+				tcpip_protocol = TcpipProtocol()
+				search_record = {}
+				search_record['head'] = 'client2server'
+				search_record['pack_type'] = 'query'
+				search_record['name'] = self.user_name
+				search_record['record_no'] = self.record_no_search_var.get()
+				
+				search_record_b = tcpip_protocol.encode_dict_bytes(search_record)
+				send_res = self.tcpip_api.client_send(search_record_b)
+				if send_res:
+					search_res = self.tcpip_api.client_recv()
 					
+					if search_res == False:
+						tkinter.messagebox.showinfo('Search Result', '无订单记录')
+					else:
+						dic_search = tcpip_protocol.decode_bytes_dict(search_res)
+						if dic_search['pack_type'] == 'error_ack':
+							tkinter.messagebox.showinfo('Warning', '查询失败pack_type！')
+						else:
+							if dic_search['res'] == 'ok':
+								dic_search.pop('res')
+								dic_search.pop('head')
+								dic_search.pop('pack_type')
+								self.search_win = ChildPanelSearch(self, dic_search['record'], self.tcpip_api)
+							else:
+								tkinter.messagebox.showinfo('Warning', '无记录！')
+				else:
+					tkinter.messagebox.showinfo('Warning', '请求失败！')
+		else:
+			tkinter.messagebox.showinfo('tips', '请先连接主机！')
 	#connect with server by socket
 	def bnt_connect(self):
 		self.server_connect_bnt['state'] = 'disabled'
 		self.tcpip_api = TCPIP_client(self.ip_addr, self.ip_port)
-		conn_res = self.tcpip_api.client_connect()
+		self.conn_res = self.tcpip_api.client_connect()
 		
-		if conn_res:
-			self.server_connect_bnt['text'] = '连接中..'
+		if self.conn_res:
+			self.server_connect_bnt_var.set('已连接')
 		else:
 			tkinter.messagebox.showinfo('Warning', '连接失败！')
+			self.server_connect_bnt['state'] = 'enabled'
+			self.server_connect_bnt_var.set('连接')
 	#save the ip configure
 	def save_ip_configure(self, ip_addr):
 		self.ip_addr = ip_addr
@@ -518,11 +568,11 @@ class ChildPanelSearch(Toplevel):
 		is_delete = tkinter.messagebox.askyesno(message = '确认删除该记录？删除后不可恢复！', icon = 'question', title = 'ask')
 		if is_delete:
 			if self.tcpip_api != None:	#client call
-				pass
+				self.delete_record_client()
 			else:
 				delete_record = {}
 				delete_record['cmd'] = 'delete'
-				delete_record['record_no'] = self.search_result['record_no']
+				delete_record['record_no'] = self.record_no_var.get()
 				self.server2gui_queue.put(delete_record)
 				
 			#disable the modify button
@@ -564,14 +614,79 @@ class ChildPanelSearch(Toplevel):
 			
 	#save/modify action for client
 	def save_modify_client(self):
-		pass
+		modifed_records = {}
+		modifed_records['name'] = self.search_result['name']
+		modifed_records['record_no'] = self.record_no_var.get()
+		modifed_records['date'] = self.date_var.get()
+		modifed_records['income'] = self.income_var.get()
+		modifed_records['income_s'] = self.income_relate_var.get()
+		modifed_records['expense'] = self.expense_var.get()
+		modifed_records['expense_s'] = self.expense_relate_var.get()
+		modifed_records['comment'] = self.comment_var.get()
 		
+		modifed_records['pack_type'] = 'update'
+		modifed_records['record_no_old'] = self.search_result['record_no']
+		modifed_records['head'] = 'client2server'
+
+		tcpip_protocol = TcpipProtocol()
+		record_info_b = tcpip_protocol.encode_dict_bytes(modifed_records)
+		send_res = self.tcpip_api.client_send(record_info_b)
+		
+		modify_res = False
+		if send_res:
+			s_recv = self.tcpip_api.client_recv()
+			if s_recv: 
+				dic_recv = tcpip_protocol.decode_bytes_dict(s_recv)
+
+				if dic_recv['pack_type'] == 'error_ack':
+					tkinter.messagebox.showinfo('tips', '修改订单失败！')
+				else:
+					if dic_recv['res'] != 'ok':
+						tkinter.messagebox.showinfo('tips', '修改订单失败！')
+					else:
+						modify_res = True
+			else:
+				tkinter.messagebox.showinfo('tips', '修改订单失败！')
+		else:
+			tkinter.messagebox.showinfo('tips', '修改订单失败！')
+		
+		return modify_res
+	#delete action for client
+	def delete_record_client(self):
+		delete_record = {}
+		delete_record['pack_type'] = 'delete'
+		delete_record['record_no'] = self.record_no_var.get()
+		delete_record['name'] = self.search_result['name']
+		delete_record['head'] = 'client2server'
+		
+		tcpip_protocol = TcpipProtocol()
+		record_info_b = tcpip_protocol.encode_dict_bytes(delete_record)
+		send_res = self.tcpip_api.client_send(record_info_b)
+		
+		delete_res = False
+		if send_res:
+			s_recv = self.tcpip_api.client_recv()
+			if s_recv: 
+				dic_recv = tcpip_protocol.decode_bytes_dict(s_recv)
+				
+				if dic_recv['pack_type'] == 'error_ack':
+					tkinter.messagebox.showinfo('tips', '删除订单失败！')
+				else:
+					if dic_recv['res'] != 'ok':
+						tkinter.messagebox.showinfo('tips', '删除订单失败！')
+					else:
+						delete_res = True
+			else:
+				tkinter.messagebox.showinfo('tips', '删除订单失败！')
+		else:
+			tkinter.messagebox.showinfo('tips', '删除订单失败！')
+		return delete_res
 ############################################## panel for ip configure ###############################
 class IPConfigurePanel(Toplevel):
 	#init
 	def __init__(self, master = None):
 		Toplevel.__init__(self, master)
-		win_width = 215
+		win_width = 245
 		win_height = 90
 		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
 		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2
@@ -597,12 +712,12 @@ class IPConfigurePanel(Toplevel):
 		self.gui_frame.grid(column = 0, row = 0, padx = 10)
 		#row 0 
 		self.ip_addr_lbl.grid(column = 0, row = 0, sticky = W, pady = 5)
-		self.ip_addr_entry.grid(column = 1, row = 0, sticky = E)
+		self.ip_addr_entry.grid(column = 1, row = 0, columnspan = 2, sticky = E)
 		#row 1
-		self.ip_eg_lbl.grid(column = 1, row = 1, sticky = W)
+		self.ip_eg_lbl.grid(column = 1, row = 1, columnspan = 2, sticky = W)
 		#row 2
-		self.ip_sure.grid(column = 0, row = 2)
-		self.ip_cancle.grid(column = 1, row = 2)
+		self.ip_sure.grid(column = 1, row = 2)
+		self.ip_cancle.grid(column = 2, row = 2)
 		
 	def bnt_ip_sure(self):
 		ip_addr = self.ip_addr_var.get()
