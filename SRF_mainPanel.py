@@ -19,6 +19,7 @@ import time
 import re
 from SRF_tcpip_protocol import *
 import SRF_CommonDefine as commonDefine
+import socket
 
 
 class MainPanel():
@@ -63,10 +64,16 @@ class MainPanelServer(Toplevel):
 			self.server_task.server_task_exit()
 	#gui init
 	def server_gui_init(self):
+		#get ip address
+		myname = socket.getfqdn(socket.gethostname())
+		#获取本机ip
+		ipAddr = socket.gethostbyname(myname)
+		
 		self.title('Server Main Panel')
 		self.gui_frame = ttk.Frame(self)
 		#row 0
 		self.usr_name_lbl = ttk.Label(self.gui_frame, text = '用户名: %s'%(self.user_name))
+		self.usr_ip_addr = ttk.Label(self.gui_frame, text = 'ip地址：%s'%(ipAddr))
 		#row 1		
 		self.record_no_lbl = ttk.Label(self.gui_frame, text = '订单编号:')
 		self.record_no_var = StringVar()
@@ -106,7 +113,9 @@ class MainPanelServer(Toplevel):
 		self.search_bnt = ttk.Button(self.gui_frame, text = '查询', command = self.bnt_search_record)
 		#row 6
 		self.gross_profit_lbl = ttk.Label(self.gui_frame, text = '毛利:')
-		self.gross_profit = ttk.Label(self.gui_frame, text = '0')
+		self.gross_profit_var = StringVar()
+		self.gross_profit_var.set('0')
+		self.gross_profit = ttk.Label(self.gui_frame, textvariable = self.gross_profit_var)
 		self.gross_update_bnt = ttk.Button(self.gui_frame, text = '更新', command = self.bnt_update_gross_profit)
 		self.reg_user_manage_bnt = ttk.Button(self.gui_frame, text = '用户管理', command = self.bnt_manage_users)
 		
@@ -115,6 +124,7 @@ class MainPanelServer(Toplevel):
 		#row 0
 		gui_row = 0
 		self.usr_name_lbl.grid(column = 0, row = gui_row, columnspan = 2, sticky = W, pady = 10)
+		self.usr_ip_addr.grid(column = 3, row = gui_row, sticky = W)
 		#row 1
 		gui_row = 1
 		self.record_no_lbl.grid(column = 0, row = gui_row, sticky = W, pady = 5)
@@ -166,7 +176,8 @@ class MainPanelServer(Toplevel):
 					queue_item.pop('cmd')
 					queue_item.pop('res')
 					self.search_win = ChildPanelSearch(master = self, search_res = queue_item, gui2server_queue = self.gui2server_queue)				
-							
+			elif queue_item['cmd'] == 'g_profit':
+				self.gross_profit_var.set(str(queue_item['g_profit']))
 	#create a new record
 	def bnt_create_new_record(self):
 		self.one_record = {}
@@ -209,7 +220,9 @@ class MainPanelServer(Toplevel):
 			self.gui2server_queue.put(query_no)
 	#update the gross profit
 	def bnt_update_gross_profit(self):
-		pass
+		profit = {}
+		profit['cmd'] = 'profit_update'
+		self.gui2server_queue.put(profit)
 		
 	#manage the registered user
 	def bnt_manage_users(self):

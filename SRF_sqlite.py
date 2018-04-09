@@ -72,6 +72,26 @@ class FinancialDataRecord():
 		else:
 			self.cursor.execute("DELETE FROM UserFinanRecords WHERE recordNum = ? AND usr_name = ?", (record_num, name, ))
 	
+	#profit compute
+	def comput_profit(self):
+		gross_profit = 0;
+		
+		self.cursor.execute("SELECT income FROM UserFinanRecords")		
+		income_res = self.cursor.fetchall()
+		total_income = 0;
+		for income in income_res:
+			total_income+= income[0]
+		
+		self.cursor.execute("SELECT expense FROM UserFinanRecords")		
+		expense_res = self.cursor.fetchall()
+		total_expense = 0
+		for expense in expense_res:
+			total_expense += expense[0]
+			
+		gross_profit = total_income - total_expense
+
+		return gross_profit
+	
 	def close_sqlite(self):
 		self.cursor.close()
 		self.conn.commit()

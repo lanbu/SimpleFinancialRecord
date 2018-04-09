@@ -60,6 +60,12 @@ class ServerLogic(threading.Thread):
 					self.sqlite_records.sql_update_one_record(old_no, queue_message)
 				elif queue_message['cmd'] == 'delete':
 					self.sqlite_records.delete_one_record(queue_message['record_no'])
+				elif queue_message['cmd'] == 'profit_update':
+					g_profit = self.sqlite_records.comput_profit()
+					profit = {}
+					profit['cmd'] = 'g_profit'
+					profit['g_profit'] = g_profit
+					self.server2gui_queue.put(profit)
 			#message from tcpip socket
 			if not self.from_sock_queue.empty():
 				queue_message = self.from_sock_queue.get()
