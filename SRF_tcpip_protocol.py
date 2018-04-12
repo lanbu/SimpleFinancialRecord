@@ -19,6 +19,7 @@ class UserRecordInfoLiteral():
 		self.record_expense_s_liter = 'expense_s'
 		self.record_remark_liter = 'comment'
 		self.record_num_old_liter = 'record_no_old'
+		self.login_pwd = 'pwd'
 
 class TcpipProtocol():
 	def __init__(self):
@@ -36,6 +37,7 @@ class TcpipProtocol():
 		self.packType_store = 'store'
 		self.packType_update = 'update'
 		self.packType_delete = 'delete'
+		self.packType_login = 'login'
 				
 	#pack decode
 	def pack_decode(self, data_stream):
@@ -66,6 +68,12 @@ class TcpipProtocol():
 							usr_old_record_no = decoded_pack.get(usr_info_literal.record_num_old_liter)
 							if usr_old_record_no == None:
 								decoded_pack = None
+				elif pack_type == self.packType_login:
+					usr_name = decoded_pack.get(usr_info_literal.usr_name_liter)
+					usr_pwd = decoded_pack.get(usr_info_literal.login_pwd)
+					
+					if usr_name == None or usr_pwd == None:
+						decoded_pack = None
 				else:
 					decoded_pack = None
 		else:

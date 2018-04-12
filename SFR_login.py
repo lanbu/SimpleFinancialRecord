@@ -9,16 +9,19 @@ from tkinter import *
 import pickle
 import tkinter.messagebox
 from SRF_mainPanel import *
+import socket
+import SRF_CommonDefine as commonDefine
+from SRF_tcpip_protocol import *
 
 #login window class
 class Login(Tk):
 	def __init__(self):
 		Tk.__init__(self)
-		self.login_pic_path = './pictures/login.gif'
-		self.login_userinfo_path = 'usrs_info.pickle'
-		self.login_usrinfo_default_path = 'usrs_info_defaul.pickle'
-		self.administor_name = 'admin'
-		self.administor_pwd = 'ImAdmin'
+		self.login_pic_path = commonDefine.LOGIN_PIC_PATH
+		self.login_userinfo_path = commonDefine.LOGIN_USERINFO_PATH
+		self.login_usrinfo_default_path = commonDefine.LOGIN_USERINFO_DEFAULT_PATH
+		self.administor_name = commonDefine.ADMINISTRATOR
+		self.administor_pwd = commonDefine.ADMINISTRATOR_PWD
 		self.user_role = None
 		#window parameters init
 		self.title('Login')
@@ -89,30 +92,69 @@ class Login(Tk):
 		self.usr_name = self.var_usr_name.get()
 		self.usr_pwd = self.var_usr_pwd.get()
 		
-		try:
-			with open(self.login_userinfo_path, 'rb') as usr_file:
-				usrs_info = pickle.load(usr_file)
-		except FileNotFoundError:
-			with open(self.login_userinfo_path, 'wb') as usr_file:
-				usrs_info = {self.administor_name:self.administor_pwd}	#null dictionary			
-				pickle.dump(usrs_info, usr_file)
-				
-		if self.usr_name != '' and self.usr_name in usrs_info:			
-			if self.usr_pwd == usrs_info[self.usr_name]:
-				default_info = []
-				default_info.append(self.usr_name)
-				default_info.append(self.usr_pwd)
-				
-				self.login_default_info(default_info)
-				#tkinter.messagebox.showinfo(title = 'Welcome', message = 'how are you?' + self.usr_name)
-				if self.usr_name == 'admin':
-					self.user_role = 1
-				else:
-					self.user_role = 0
-				self.mainPanel = MainPanel(self, self.user_role, self.usr_name)
-			else:
-				tkinter.messagebox.showerror(message = '输入密码错误！')
+		#master login
+		if self.usr_name == 'admin':
 		
+			try:
+				with open(self.login_userinfo_path, 'rb') as usr_file:
+					usrs_info = pickle.load(usr_file)
+			except FileNotFoundError:
+				with open(self.login_userinfo_path, 'wb') as usr_file:
+					usrs_info = {self.administor_name:self.administor_pwd}	#null dictionary			
+					pickle.dump(usrs_info, usr_file)
+					
+			if self.usr_name != '' and self.usr_name in usrs_info:			
+				if self.usr_pwd == usrs_info[self.usr_name]:
+					default_info = []
+					default_info.append(self.usr_name)
+					default_info.append(self.usr_pwd)
+					
+					self.login_default_info(default_info)
+					#tkinter.messagebox.showinfo(title = 'Welcome', message = 'how are you?' + self.usr_name)
+					
+					self.user_role = 1					
+					self.mainPanel = MainPanel(self, self.user_role, self.usr_name)
+				else:
+					tkinter.messagebox.showerror(message = '输入密码错误！')
+		else:	#client login
+			self.user_role = 0
+			#start a socket for login
+			client_addr = (commonDefine.SOCKET_SERVER_IP, commonDefine.SOCKET_SERVER_PORT)
+			c_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			
+			try:
+				c_sock.connect(client_addr)
+		
+				tcpipPro = TcpipProtocol()
+				#login pack
+				login_data = {}
+				login_data['head'] = 'client2server'
+				login_data['pack_type'] = 'login'
+				login_data['name'] = self.usr_name
+				login_data['pwd'] = self.usr_pwd
+				#encode
+				login_data_b = tcpipPro.encode_dict_bytes(login_data)
+				#send
+				c_sock.send(login_data_b)
+
+				#receive
+				recv_data = c_sock.recv(commonDefine.SOCKET_RECV_LEN)
+				#decode
+				login_res = tcpipPro.decode_bytes_dict(recv_data)
+				print(login_res)
+				#login result
+				if login_res['pack_type'] == 'login_ack':
+					if login_res['res'] == 'ok':
+						self.mainPanel = MainPanel(self, self.user_role, self.usr_name)
+					else:
+						tkinter.messagebox.showinfo(title = 'Tips', message = '登录失败！')
+				else:
+					tkinter.messagebox.showinfo(title = 'Tips', message = '登录失败！')
+			except:
+				tkinter.messagebox.showinfo(title = 'Tips', message = '登录失败！')
+			finally:
+				c_sock.close()
+			
 	#user sign up
 	def usr_sign_up(self):
 		self.usr_name = self.var_usr_name.get()

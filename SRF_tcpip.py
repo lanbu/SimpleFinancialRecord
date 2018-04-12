@@ -6,6 +6,7 @@
 __author__ = 'Lanbu'
 
 import socket
+import pickle
 import time, threading
 from SRF_tcpip_protocol import *
 from SRF_sqlite import *
@@ -79,7 +80,7 @@ class Server_connect_client(threading.Thread):
 	def client_pack_process(self, recv_data):
 		data_extract = TcpipProtocol()
 		res_info = data_extract.pack_decode(recv_data)
-
+		
 		if res_info != None:
 			info_literal = UserRecordInfoLiteral()
 			if res_info['pack_type'] == data_extract.packType_query or res_info['pack_type'] == data_extract.packType_delete:
@@ -109,6 +110,30 @@ class Server_connect_client(threading.Thread):
 				store_queue['thread_id'] = self.thread_id
 				store_queue['record'] = res_info
 				self.to_server_queue.put(store_queue)
+			elif res_info['pack_type'] == 'login':
+
+				try:
+					with open(commonDefine.LOGIN_USERINFO_PATH, 'rb') as usr_file:
+						usrs_info = pickle.load(usr_file)
+				except FileNotFoundError:
+					with open(commonDefine.LOGIN_USERINFO_PATH, 'wb') as usr_file:
+						usrs_info = {commonDefine.ADMINISTRATOR:commonDefine.ADMINISTRATOR_PWD}	#null dictionary			
+						pickle.dump(usrs_info, usr_file)
+					
+				login_ack = {}
+				login_ack['head'] = 'server2client'
+				login_ack['pack_type'] = 'login_ack'
+				
+				if res_info['name'] in usrs_info:			
+					if res_info['pwd'] == usrs_info[res_info['name']]:							
+						login_ack['res'] = 'ok'
+						
+					else:
+						login_ack['res'] = 'error'
+						
+					login_ack_b = data_extract.encode_dict_bytes(login_ack)
+					self.sock.send(login_ack_b)
+					self.sock.close()
 			else:
 				pass
 				

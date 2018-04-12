@@ -25,7 +25,7 @@ class ServerLogic(threading.Thread):
 		#sqlite init
 		self.sqlite_records = FinancialDataRecord()
 		#tcpip init
-		self.tcpip_server = TCPIP_server(ip_addr = '127.0.0.1', ip_port = 9999, ip_max_num = 100, from_server_queues = self.to_sock_queues, to_server_queue = self.from_sock_queue)
+		self.tcpip_server = TCPIP_server(ip_addr = commonDefine.SOCKET_SERVER_IP, ip_port = commonDefine.SOCKET_SERVER_PORT, ip_max_num = 100, from_server_queues = self.to_sock_queues, to_server_queue = self.from_sock_queue)
 		self.tcpip_server.start()
 		
 	def run(self):

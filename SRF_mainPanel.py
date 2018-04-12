@@ -246,8 +246,8 @@ class MainPanelClient(Toplevel):
 		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
 		self.client_gui_init()
 		#ip connecting parameters
-		self.ip_addr = '127.0.0.1'
-		self.ip_port = 9999
+		self.ip_addr = commonDefine.SOCKET_SERVER_IP
+		self.ip_port = commonDefine.SOCKET_SERVER_PORT
 		#message queue for communication between panel and client socket
 		self.to_sock_queue = queue.Queue()
 		self.from_sock_queue = queue.Queue()
