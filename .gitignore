@@ -105,3 +105,7 @@ pictures/
 usrs_info.pickle
 usrs_info_defaul.pickle
 SRF_RecordsDB.db
+build
+dist
+picutres
+SFR_login.exe
