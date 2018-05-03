@@ -464,8 +464,8 @@ class ChildPanelSearch(Toplevel):
 		self.is_modify = True
 		self.tcpip_api = tcpip_api
 		self.server2gui_queue = gui2server_queue
-		win_width = 860
-		win_height = 130
+		win_width = 790
+		win_height = 370
 		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
 		win_pos_y = (self.winfo_screenheight() - 100) // 2 - win_height // 2
 		self.geometry('%sx%s+%s+%s' % (win_width, win_height, win_pos_x, win_pos_y))
@@ -510,6 +510,24 @@ class ChildPanelSearch(Toplevel):
 		self.bnt_modify_text.set('修改')
 		self.search_modify_bnt = ttk.Button(self.gui_frame, textvariable = self.bnt_modify_text, command = self.btn_search_saveOrmodify)
 		self.search_delete_bnt = ttk.Button(self.gui_frame, text = '删除', command = self.btn_search_delete)
+		#row 4
+		self.search_tree = ttk.Treeview(self.gui_frame, columns = ('1', '2', '3', '4'))
+		#number
+		self.search_tree.heading("#0", text="NO.")
+		self.search_tree.column("#0",minwidth=0,width=30, stretch=NO)
+		#date
+		self.search_tree.heading("1", text="日期")   
+		self.search_tree.column("1",minwidth=0,width=100, stretch=NO) 
+		#income
+		self.search_tree.heading("2", text="收入")   
+		self.search_tree.column("2",minwidth=0,width=70, stretch=NO) 
+		#expense
+		self.search_tree.heading("3", text="支出")   
+		self.search_tree.column("3",minwidth=0,width=70, stretch=NO)
+		#comment
+		self.search_tree.heading("4", text = '备注')
+
+		self.tree_scro_v = ttk.Scrollbar(self.gui_frame, orient = VERTICAL, command = self.search_tree.yview)
 		
 		#grid widgets
 		self.gui_frame.grid(column = 0, row = 0, padx = 10)
@@ -538,6 +556,11 @@ class ChildPanelSearch(Toplevel):
 		self.search_sure_bnt.grid(column = 3, row = gui_row, sticky = W, padx = 3)
 		self.search_modify_bnt.grid(column = 4, row = gui_row, sticky = E, padx = 3)
 		self.search_delete_bnt.grid(column = 5, row = gui_row, sticky = E, padx = 3)
+		#row 4
+		self.search_tree.grid(column = 0, row = 4, columnspan = 8, pady = 10, sticky = (N, W, E, S))
+		self.tree_scro_v.grid(column = 9, row = 4, sticky = (N, S))
+		self.tree_scro_h.grid(column = 0, row = 5, columnspan = 8, sticky = (E, W))
+		self.search_tree['yscrollcommand'] = self.tree_scro_v.set
 		
 	#init search result
 	def search_dispaly_init(self):
@@ -548,7 +571,11 @@ class ChildPanelSearch(Toplevel):
 		self.expense_var.set(self.search_result['expense'])
 		self.expense_relate_var.set(self.search_result['expense_s'])
 		self.comment_var.set(self.search_result['comment'])
-		
+	
+	#insert one record into the displaying tree_scro_h
+	def intsert_record_2_tree(self):
+		pass
+	
 	#sure for searching result
 	def btn_search_sure(self):
 		if not self.is_modify:
