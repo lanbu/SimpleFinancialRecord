@@ -511,21 +511,30 @@ class ChildPanelSearch(Toplevel):
 		self.search_modify_bnt = ttk.Button(self.gui_frame, textvariable = self.bnt_modify_text, command = self.btn_search_saveOrmodify)
 		self.search_delete_bnt = ttk.Button(self.gui_frame, text = '删除', command = self.btn_search_delete)
 		#row 4
-		self.search_tree = ttk.Treeview(self.gui_frame, columns = ('1', '2', '3', '4'))
+		self.search_tree = ttk.Treeview(self.gui_frame, columns = ('1', '2', '3', '4', '5', '6'))
 		#number
-		self.search_tree.heading("#0", text="NO.")
-		self.search_tree.column("#0",minwidth=0,width=30, stretch=NO)
+		self.search_tree.heading("#0", text="订单号")
+		self.search_tree.column("#0", anchor='center', minwidth=0,width=50, stretch=NO)
 		#date
 		self.search_tree.heading("1", text="日期")   
-		self.search_tree.column("1",minwidth=0,width=100, stretch=NO) 
+		self.search_tree.column("1", anchor='center', minwidth=0,width=100, stretch=NO) 
 		#income
 		self.search_tree.heading("2", text="收入")   
-		self.search_tree.column("2",minwidth=0,width=70, stretch=NO) 
+		self.search_tree.column("2", anchor='center', minwidth=0,width=70, stretch=NO)
+		#income related
+		self.search_tree.heading('3', text = '收入关联')
+		self.search_tree.column('3', anchor='center', minwidth=0,width=60, stretch=NO)
 		#expense
-		self.search_tree.heading("3", text="支出")   
-		self.search_tree.column("3",minwidth=0,width=70, stretch=NO)
+		self.search_tree.heading("4", text="支出")   
+		self.search_tree.column("4", anchor='center', minwidth=0,width=70, stretch=NO)
+		#expense related
+		self.search_tree.heading("5", text="支出关联")   
+		self.search_tree.column("5", anchor='center', minwidth=0,width=60, stretch=NO)
 		#comment
-		self.search_tree.heading("4", text = '备注')
+		self.search_tree.heading("6", text = '备注')
+		self.search_tree.column("6", anchor='center')
+		#bind click select
+		self.search_tree.bind('<ButtonRelease-1>', self.select_tree_item) 
 
 		self.tree_scro_v = ttk.Scrollbar(self.gui_frame, orient = VERTICAL, command = self.search_tree.yview)
 		
@@ -559,7 +568,6 @@ class ChildPanelSearch(Toplevel):
 		#row 4
 		self.search_tree.grid(column = 0, row = 4, columnspan = 8, pady = 10, sticky = (N, W, E, S))
 		self.tree_scro_v.grid(column = 9, row = 4, sticky = (N, S))
-		self.tree_scro_h.grid(column = 0, row = 5, columnspan = 8, sticky = (E, W))
 		self.search_tree['yscrollcommand'] = self.tree_scro_v.set
 		
 	#init search result
@@ -571,10 +579,39 @@ class ChildPanelSearch(Toplevel):
 		self.expense_var.set(self.search_result['expense'])
 		self.expense_relate_var.set(self.search_result['expense_s'])
 		self.comment_var.set(self.search_result['comment'])
-	
+		
+		self.intsert_record_2_tree(self.search_result)
+		self.search_result['income'] = 1
+		self.intsert_record_2_tree(self.search_result)
+	#display update
+	def search_display_update(self, update_record = None):
+		if update_record != None:
+			self.record_no_var.set(update_record['record_no'])
+			self.date_var.set(update_record['date'])
+			self.income_var.set(update_record['income'])
+			self.income_relate_var.set(update_record['income_s'])
+			self.expense_var.set(update_record['expense'])
+			self.expense_relate_var.set(update_record['expense_s'])
+			self.comment_var.set(update_record['comment'])
+			
 	#insert one record into the displaying tree_scro_h
-	def intsert_record_2_tree(self):
-		pass
+	def intsert_record_2_tree(self, one_record = None):
+		if one_record != None:
+			self.search_tree.insert('', 'end', text = one_record['record_no'], values = (one_record['date'], one_record['income'], one_record['income_s'], one_record['expense'],one_record['expense_s'], one_record['comment']))
+	
+	#response for tree item selected
+	def select_tree_item(self, e):
+		selected_item = self.search_tree.item(self.search_tree.selection())
+		selected_record = {}
+		selected_record['record_no'] = selected_item['text']
+		selected_record['date'] = selected_item['values'][0]
+		selected_record['income'] = selected_item['values'][1]
+		selected_record['income_s'] = selected_item['values'][2]
+		selected_record['expense'] = selected_item['values'][3]
+		selected_record['expense_s'] = selected_item['values'][4]
+		selected_record['comment'] = selected_item['values'][5]
+		
+		self.search_display_update(selected_record)
 	
 	#sure for searching result
 	def btn_search_sure(self):
