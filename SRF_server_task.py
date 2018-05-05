@@ -48,11 +48,13 @@ class ServerLogic(threading.Thread):
 					query_res = self.sqlite_records.sql_query_one_record(queue_message['record_no'])
 					
 					if query_res == False:
-						query_res = {'cmd':'query', 'res':'error'}
+						qres = {'cmd':'query', 'res':'error'}
 					else:
-						query_res['cmd'] = 'query'
-						query_res['res'] = 'ok'
-					self.server2gui_queue.put(query_res)
+						qres = {}
+						qres['cmd'] = 'query'
+						qres['res'] = 'ok'
+						qres['records'] = query_res
+					self.server2gui_queue.put(qres)
 				elif queue_message['cmd'] == 'update':
 					queue_message.pop('cmd')
 					old_no = queue_message['old_no']

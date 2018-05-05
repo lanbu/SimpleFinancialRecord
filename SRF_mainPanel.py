@@ -175,7 +175,7 @@ class MainPanelServer(Toplevel):
 				else:
 					queue_item.pop('cmd')
 					queue_item.pop('res')
-					self.search_win = ChildPanelSearch(master = self, search_res = queue_item, gui2server_queue = self.gui2server_queue)				
+					self.search_win = ChildPanelSearch(master = self, search_res = queue_item['records'], gui2server_queue = self.gui2server_queue)				
 			elif queue_item['cmd'] == 'g_profit':
 				self.gross_profit_var.set(str(queue_item['g_profit']))
 	#create a new record
@@ -218,6 +218,7 @@ class MainPanelServer(Toplevel):
 			query_no['record_no'] = record_number
 			query_no['cmd'] = 'query'
 			self.gui2server_queue.put(query_no)
+			
 	#update the gross profit
 	def bnt_update_gross_profit(self):
 		profit = {}
@@ -464,6 +465,7 @@ class ChildPanelSearch(Toplevel):
 		self.is_modify = True
 		self.tcpip_api = tcpip_api
 		self.server2gui_queue = gui2server_queue
+		self.sel_item = None
 		win_width = 790
 		win_height = 370
 		win_pos_x = self.winfo_screenwidth() // 2 - win_width // 2
@@ -572,17 +574,16 @@ class ChildPanelSearch(Toplevel):
 		
 	#init search result
 	def search_dispaly_init(self):
-		self.record_no_var.set(self.search_result['record_no'])
-		self.date_var.set(self.search_result['date'])
-		self.income_var.set(self.search_result['income'])
-		self.income_relate_var.set(self.search_result['income_s'])
-		self.expense_var.set(self.search_result['expense'])
-		self.expense_relate_var.set(self.search_result['expense_s'])
-		self.comment_var.set(self.search_result['comment'])
+		self.date_var.set(self.search_result[0][1])	#date	
+		self.record_no_var.set(self.search_result[0][2])	#record nunber			
+		self.income_var.set(self.search_result[0][3])	#income
+		self.income_relate_var.set(self.search_result[0][4])	#income related
+		self.expense_var.set(self.search_result[0][5])	#expense
+		self.expense_relate_var.set(self.search_result[0][6])	#expense related
+		self.comment_var.set(self.search_result[0][7])	#comment
 		
 		self.intsert_record_2_tree(self.search_result)
-		self.search_result['income'] = 1
-		self.intsert_record_2_tree(self.search_result)
+		
 	#display update
 	def search_display_update(self, update_record = None):
 		if update_record != None:
@@ -595,12 +596,22 @@ class ChildPanelSearch(Toplevel):
 			self.comment_var.set(update_record['comment'])
 			
 	#insert one record into the displaying tree_scro_h
-	def intsert_record_2_tree(self, one_record = None):
-		if one_record != None:
-			self.search_tree.insert('', 'end', text = one_record['record_no'], values = (one_record['date'], one_record['income'], one_record['income_s'], one_record['expense'],one_record['expense_s'], one_record['comment']))
-	
+	def intsert_record_2_tree(self, records = None):
+		if records != None:
+			for one_record in records:
+				self.search_tree.insert('', 'end', text = one_record[2], values = (one_record[1], one_record[3], one_record[4], one_record[5],one_record[6], one_record[7]))
+		
 	#response for tree item selected
 	def select_tree_item(self, e):
+		if not self.is_modify:
+			is_quit = tkinter.messagebox.askyesno(message = '是否保存修改？', icon = 'question', title = 'ask')
+			if is_quit == True:
+				self.btn_search_saveOrmodify()					
+			else:
+				self.is_modify = False		
+				self.en_disable_records_modify('disabled')
+				
+		self.sel_item = self.search_tree.selection()[0]
 		selected_item = self.search_tree.item(self.search_tree.selection())
 		selected_record = {}
 		selected_record['record_no'] = selected_item['text']
@@ -610,9 +621,7 @@ class ChildPanelSearch(Toplevel):
 		selected_record['expense'] = selected_item['values'][3]
 		selected_record['expense_s'] = selected_item['values'][4]
 		selected_record['comment'] = selected_item['values'][5]
-		
-		self.search_display_update(selected_record)
-	
+
 	#sure for searching result
 	def btn_search_sure(self):
 		if not self.is_modify:
@@ -639,7 +648,7 @@ class ChildPanelSearch(Toplevel):
 				
 			self.bnt_modify_text.set('修改')
 			self.en_disable_records_modify('disabled')
-	
+			
 	#delete the record
 	def btn_search_delete(self):
 		is_delete = tkinter.messagebox.askyesno(message = '确认删除该记录？删除后不可恢复！', icon = 'question', title = 'ask')
@@ -662,6 +671,7 @@ class ChildPanelSearch(Toplevel):
 			self.expense_var.set('')
 			self.expense_relate_var.set('')
 			self.comment_var.set('')
+			
 	#enable or disable the widgets
 	def en_disable_records_modify(self, is_en_disable):
 		if is_en_disable in ('disabled', 'enabled'):
@@ -676,7 +686,7 @@ class ChildPanelSearch(Toplevel):
 	#save/modify action for master
 	def save_modify_master(self):
 		modifed_records = {}
-		modifed_records['name'] = self.search_result['name']
+		modifed_records['name'] = self.search_result[0][0]	#name
 		modifed_records['record_no'] = self.record_no_var.get()
 		modifed_records['date'] = self.date_var.get()
 		modifed_records['income'] = self.income_var.get()
@@ -686,13 +696,13 @@ class ChildPanelSearch(Toplevel):
 		modifed_records['comment'] = self.comment_var.get()
 		
 		modifed_records['cmd'] = 'update'
-		modifed_records['old_no'] = self.search_result['record_no']	
+		modifed_records['old_no'] = self.search_result[0][2]	#record number	
 		self.server2gui_queue.put(modifed_records)
 			
 	#save/modify action for client
 	def save_modify_client(self):
 		modifed_records = {}
-		modifed_records['name'] = self.search_result['name']
+		modifed_records['name'] = self.search_result[0][0]	#name
 		modifed_records['record_no'] = self.record_no_var.get()
 		modifed_records['date'] = self.date_var.get()
 		modifed_records['income'] = self.income_var.get()
@@ -702,7 +712,7 @@ class ChildPanelSearch(Toplevel):
 		modifed_records['comment'] = self.comment_var.get()
 		
 		modifed_records['pack_type'] = 'update'
-		modifed_records['record_no_old'] = self.search_result['record_no']
+		modifed_records['record_no_old'] = self.search_result[0][2]	#record number
 		modifed_records['head'] = 'client2server'
 
 		tcpip_protocol = TcpipProtocol()
@@ -733,7 +743,7 @@ class ChildPanelSearch(Toplevel):
 		delete_record = {}
 		delete_record['pack_type'] = 'delete'
 		delete_record['record_no'] = self.record_no_var.get()
-		delete_record['name'] = self.search_result['name']
+		delete_record['name'] = self.search_result[0][0]	#name
 		delete_record['head'] = 'client2server'
 		
 		tcpip_protocol = TcpipProtocol()

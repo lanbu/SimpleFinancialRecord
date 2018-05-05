@@ -51,6 +51,7 @@ class FinancialDataRecord():
 		res = self.cursor.fetchall()
 		
 		if len(res):
+			''' only return one record
 			sql_query_res = {}
 			sql_query_res['name'] = res[0][0]
 			sql_query_res['date'] = res[0][1]
@@ -60,8 +61,11 @@ class FinancialDataRecord():
 			sql_query_res['expense'] = res[0][5]
 			sql_query_res['expense_s'] = res[0][6]
 			sql_query_res['comment'] = res[0][7]
-		
+			
 			return sql_query_res
+			'''
+			
+			return res
 		else:
 			return False
 	#delete one record
