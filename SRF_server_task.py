@@ -61,7 +61,7 @@ class ServerLogic(threading.Thread):
 					queue_message.pop('old_no')
 					self.sqlite_records.sql_update_one_record(old_no, queue_message)
 				elif queue_message['cmd'] == 'delete':
-					self.sqlite_records.delete_one_record(queue_message['record_no'])
+					self.sqlite_records.delete_one_record(queue_message['record'])
 				elif queue_message['cmd'] == 'profit_update':
 					g_profit = self.sqlite_records.comput_profit()
 					profit = {}

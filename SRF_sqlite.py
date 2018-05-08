@@ -36,7 +36,7 @@ class FinancialDataRecord():
 	#update one record
 	def sql_update_one_record(self, old_record_no, record_info = {}):
 		#at first delete the old record
-		self.cursor.execute("DELETE FROM UserFinanRecords WHERE recordNum = ?", (old_record_no,))
+		self.cursor.execute("DELETE FROM UserFinanRecords WHERE usr_name = ? AND date = ? AND recordNum = ? AND income = ? AND expense = ?", (old_record_no['name'], old_record_no['date'], old_record_no['record_no'], old_record_no['income'], old_record_no['expense'],))
 		#add the new record
 		self.cursor.execute("INSERT INTO UserFinanRecords VALUES (?,?,?,?,?,?,?,?)", \
 							(record_info['name'], record_info['date'], record_info['record_no'], float(record_info['income']), record_info['income_s'], float(record_info['expense']), record_info['expense_s'], record_info['comment'],))
@@ -72,7 +72,7 @@ class FinancialDataRecord():
 	def delete_one_record(self, record_num = None, name = None):
 		if name == None:
 			#delete record
-			self.cursor.execute("DELETE FROM UserFinanRecords WHERE recordNum = ?", (record_num,))
+			self.cursor.execute("DELETE FROM UserFinanRecords WHERE usr_name = ? AND date = ? AND recordNum = ? AND income = ? AND expense = ?", (record_num['name'], record_num['date'], record_num['record_no'], record_num['income'], record_num['expense'],))
 		else:
 			self.cursor.execute("DELETE FROM UserFinanRecords WHERE recordNum = ? AND usr_name = ?", (record_num, name, ))
 	

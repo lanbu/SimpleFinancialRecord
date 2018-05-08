@@ -462,6 +462,7 @@ class ChildPanelSearch(Toplevel):
 	def __init__(self, master = None, search_res = None, tcpip_api = None, gui2server_queue = None):
 		Toplevel.__init__(self, master)
 		self.search_result = search_res
+		self.back_record = {'name':self.search_result[0][0], 'record_no':self.search_result[0][2]}
 		self.is_modify = True
 		self.tcpip_api = tcpip_api
 		self.server2gui_queue = gui2server_queue
@@ -621,7 +622,16 @@ class ChildPanelSearch(Toplevel):
 		selected_record['expense'] = selected_item['values'][3]
 		selected_record['expense_s'] = selected_item['values'][4]
 		selected_record['comment'] = selected_item['values'][5]
-
+		
+		#backup the selected record
+		self.back_record['record_no'] = selected_record['record_no']
+		self.back_record['date'] = selected_record['date']
+		self.back_record['income'] = selected_record['income']
+		self.back_record['income_s'] = selected_record['income_s']
+		self.back_record['expense'] = selected_record['expense']
+		self.back_record['expense_s'] = selected_record['expense_s']
+		self.back_record['comment'] = selected_record['comment']
+		
 	#sure for searching result
 	def btn_search_sure(self):
 		if not self.is_modify:
@@ -658,7 +668,7 @@ class ChildPanelSearch(Toplevel):
 			else:
 				delete_record = {}
 				delete_record['cmd'] = 'delete'
-				delete_record['record_no'] = self.record_no_var.get()
+				delete_record['record'] = self.back_record
 				self.server2gui_queue.put(delete_record)
 				
 			#disable the modify button
@@ -696,7 +706,7 @@ class ChildPanelSearch(Toplevel):
 		modifed_records['comment'] = self.comment_var.get()
 		
 		modifed_records['cmd'] = 'update'
-		modifed_records['old_no'] = self.search_result[0][2]	#record number	
+		modifed_records['old_no'] = self.back_record	#old record	
 		self.server2gui_queue.put(modifed_records)
 			
 	#save/modify action for client
