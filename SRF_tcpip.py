@@ -12,6 +12,7 @@ from SRF_tcpip_protocol import *
 from SRF_sqlite import *
 import queue
 import SRF_CommonDefine as commonDefine
+import struct
 
 ############################################# tcpip server ####################################################
 class TCPIP_server(threading.Thread):
@@ -56,7 +57,7 @@ class Server_connect_client(threading.Thread):
 		#get threading id
 		self.thread_id = threading.get_ident()
 		self.from_server_queues[self.thread_id] = queue.Queue()
-		
+
 	def run(self):				
 		while self.is_disconnected:
 			try:
@@ -149,14 +150,16 @@ class Server_connect_client(threading.Thread):
 			ser_pack['head'] = data_extract.packHead_server2client
 			ser_pack_encode = data_extract.pack_encode(ser_pack)
 			#sock send data
-			self.sock.send(ser_pack_encode)
+			ser_pack_len = struct.pack('<L', len(ser_pack_encode))
+			print(ser_pack_len + ser_pack_encode)
+			self.sock.send(ser_pack_len + ser_pack_encode)
 		elif ser_pack['cmd'] == 'store':
 			ser_pack.pop('cmd')
 			ser_pack['pack_type'] = data_extract.packType_store_ack
 			ser_pack['head'] = data_extract.packHead_server2client
 			ser_pack_encode = data_extract.pack_encode(ser_pack)
 			#sock send data
-			self.sock.send(ser_pack_encode)
+			self.sock.send(ser_pack_encode)		
 		elif ser_pack['cmd'] == 'update':
 			ser_pack.pop('cmd')
 			ser_pack['pack_type'] = data_extract.packType_update_ack
@@ -186,9 +189,43 @@ class Server_connect_client(threading.Thread):
 class TCPIP_client(threading.Thread):
 	def __init__(self, ip_addr, ip_port, from_server_queue = None, to_server_queue = None):
 		threading.Thread.__init__(self, daemon = True)
+		self.from_serv_queue = from_server_queue
+		self.to_serv_queue = to_server_queue		
+		self.client_quit = False
 		self.client_addr = (ip_addr, ip_port)
 		self.c_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		
+	def run(self):
+		#message loop
+		while not self.client_quit:
+			while self.from_serv_queue.empty():
+				time.sleep(0.1)
+			
+			serv_pack = self.from_serv_queue.get()
+			self.serv_pack_process(serv_pack)
+	
+	def serv_pack_process(self, server_pack = None):
+		if server_pack != None:
+			if server_pack['cmd'] == 'connect':
+				connect_res = self.client_connect()
+				connect_ack = {'cmd':'connect'}
+				if connect_res:
+					connect_ack['res'] = 'ok'
+					tcpip_protocol = TcpipProtocol()
+					record_info = {'head':'client2server', 'pack_type':'store', 'name':'admin', 'record_no':'124', 'date':'20180330', 'income':0, 'income_s':'', 'expense':0, 'expense_s':'', 'comment':''}	
+					record_info_b = tcpip_protocol.encode_dict_bytes(record_info)
+					self.client_send(record_info_b)
+					#recv = self.client_recv()
+					#print(recv)
+				else:
+					connect_ack['res'] = 'error'
+			elif server_pack['cmd'] == 'store':
+				pass
+			elif server_pack['cmd'] == 'search':
+				pass
+			else:
+				pass
+				
 	def client_connect(self):
 		try:
 			self.c_sock.connect(self.client_addr)
@@ -207,7 +244,7 @@ class TCPIP_client(threading.Thread):
 	
 	def client_recv(self):
 		try:
-			recv_data = self.c_sock.recv(commonDefine.SOCKET_RECV_LEN)
+			recv_data = self.c_sock.recv(1024)
 		except:
 			recv_data = False
 		

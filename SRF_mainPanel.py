@@ -253,7 +253,8 @@ class MainPanelClient(Toplevel):
 		self.to_sock_queue = queue.Queue()
 		self.from_sock_queue = queue.Queue()
 		#tcpip init for record store or search
-		self.tcpip_api = None		
+		self.tcpip_api = TCPIP_client(self.ip_addr, self.ip_port, from_server_queue = self.to_sock_queue, to_server_queue = self.from_sock_queue)
+		self.tcpip_api.start()
 	#destroy the window
 	def destroy(self):
 		is_quit = tkinter.messagebox.askyesno(message = '确认退出？', icon = 'question', title = 'quit')
@@ -438,15 +439,15 @@ class MainPanelClient(Toplevel):
 	#connect with server by socket
 	def bnt_connect(self):
 		self.server_connect_bnt['state'] = 'disabled'
-		self.tcpip_api = TCPIP_client(self.ip_addr, self.ip_port)
-		self.conn_res = self.tcpip_api.client_connect()
 		
-		if self.conn_res:
+		conncet_cmd = {'cmd':'connect'}
+		self.to_sock_queue.put(conncet_cmd)		
+		'''if self.conn_res:
 			self.server_connect_bnt_var.set('已连接')
 		else:
 			tkinter.messagebox.showinfo('Warning', '连接失败！')
 			self.server_connect_bnt['state'] = 'enabled'
-			self.server_connect_bnt_var.set('连接')
+			self.server_connect_bnt_var.set('连接')'''
 	#save the ip configure
 	def save_ip_configure(self, ip_addr):
 		self.ip_addr = ip_addr
